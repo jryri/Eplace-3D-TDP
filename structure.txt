@@ -1,0 +1,29 @@
+solution/ this is extracted after “tar -zxvf solution.tar.gz”
+├── ASAP7
+|    ├─ LEF/ ...
+|    ├─ LIB/ ...
+|    └─ ...
+├── eplace (bin)
+├── openroad (bin)
+├── setup_environment.sh
+├── run.sh 
+├── after_buffered/ # from our buffering 
+|    ├─ <design_name>_buf.aux
+|    ├─ <design_name>_buf.pl
+|    ├─ <design_name>_buf.nodes
+|    ├─ <design_name>_buf.nets
+|    ├─ <design_name>_buf.scl
+|    ├─ <design_name>.buf.changelist
+|    └─ <design_name>_buf.def
+├── testcases/ ← (provided by the host)
+|    └─ <design_name>/ ...
+├── eplace_solution/ 
+|    └─ <design_name>_buf/
+|         ├─ <design_name>_buf-eDP.def
+|         ├─ <design_name>_buf-eDP.aux
+|         ├─ <design_name>_buf-eDP.pl
+|         ├─ <design_name>_buf-eDP.nodes
+|         ├─ <design_name>_buf-eDP.nets
+|         └─ <design_name>_buf-eDP.scl
+
+
