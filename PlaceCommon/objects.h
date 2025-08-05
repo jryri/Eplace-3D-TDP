@@ -66,6 +66,13 @@ public:
     VECTOR_2D getWirelengthGradientWA_2D(VECTOR_2D, Pin *);
     VECTOR_2D getWirelengthGradientLSE_2D(VECTOR_2D, Pin *);
     VECTOR_2D getP2pAttractionGradient_2D(Pin *, PlaceDB* );
+    
+    // 3D versions
+    double calcBoundPin_3D(); // True 3D version without Z=0 assertion
+    double calcWirelengthWA_3D(VECTOR_3D);
+    double calcWirelengthLSE_3D(VECTOR_3D);
+    VECTOR_3D getWirelengthGradientWA_3D(VECTOR_3D, Pin *);
+    VECTOR_3D getWirelengthGradientLSE_3D(VECTOR_3D, Pin *);
 };
 
 class Pin
@@ -142,18 +149,23 @@ public:
         name = _name;
         width = _width;
         height = _height;
+        depth = _height; // Default depth equals height for 2D compatibility
         area = float_mul(width, height); //! area calculated here!
+        volume = width * height * depth; //! volume calculated here!
         isFixed = _isFixed;
         isNI = _isNI; // 2022-05-13 (frank)
         idx = _index;
         assert(area >= 0);
+        assert(volume >= 0);
     }
     int idx;
     Tier *tier;
     string name;
     float width;
     float height;
+    float depth;   // 3D depth (Z-axis dimension)
     float area;
+    float volume;  // 3D volume
     float orientation;
     bool isMacro;
     bool isFixed;
@@ -169,7 +181,9 @@ public:
         center.SetZero();
         width = 0;
         height = 0;
+        depth = 0;
         area = 0;
+        volume = 0;
         orientation = 0;
         isMacro = false;
         isFiller = false;
@@ -187,13 +201,18 @@ public:
     string getName() { return name; }
     float getWidth() { return width; }
     float getHeight() { return height; }
+    float getDepth() { return depth; } // 3D depth
     POS_3D getLocation() { return coor; }
     POS_3D getCenter() { return center; }
     POS_3D getInitialLocation() { return initialcoor; }
     POS_3D getInitialCenter() { return initialcenter; }
     POS_2D getLL_2D();
     POS_2D getUR_2D();
+    POS_3D getLL_3D(); // 3D lower-left-front corner
+    POS_3D getUR_3D(); // 3D upper-right-back corner
     float getArea() { return area; }
+    float getVolume() { return volume; } // 3D volume
+    float calcVolume() { volume = width * height * depth; return volume; } // Calculate 3D volume
     short int getOrientation() { return orientation; }
     void setOrientation(int);
     int getTotalConnectedPinsNum();
@@ -207,6 +226,9 @@ private:
     void setLocation_2D(float, float, float = 0);
     void setInitialLocation_2D(float, float, float = 0);
     void setCenter_2D(float, float, float = 0);
+    void setLocation_3D(float, float, float); // 3D version
+    void setInitialLocation_3D(float, float, float); // 3D version
+    void setCenter_3D(float, float, float); // 3D version
 };
 
 class Row
@@ -265,9 +287,16 @@ public:
     POS_2D end;                 //! lower right coor of this row;
     ORIENT orientation;         // donnie 2006-04-23  N (0) or S (1)
     vector<Interval> intervals; //!
-    // double site_spacing;// site spacing in bookshelf format, equals to site width
+    
+    // 3D support
+    double front = 0.0;         // front Z coordinate for 3D
+    double depth = 1.0;         // depth in Z direction for 3D
+    
+    // site spacing in bookshelf format, equals to site width
     POS_2D getLL_2D();
     POS_2D getUR_2D();
+    POS_3D getLL_3D(); // 3D version
+    POS_3D getUR_3D(); // 3D version
     bool Lesser(SiteRow &r1, SiteRow &r2)
     {
         return (r1.bottom < r2.bottom);

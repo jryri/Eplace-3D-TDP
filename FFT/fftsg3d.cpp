@@ -39,6 +39,11 @@
 
 #include        "global.h"
 
+// Define precision type for FFT calculations
+typedef float prec;
+
+namespace replace {
+
 /*
 Fast Fourier/Cosine/Sine Transform
     dimension   :three
@@ -1938,4 +1943,6 @@ void *ddxt3db_th(void *p)
     return (void *) 0;
 }
 #endif /* USE_FFT3D_THREADS */
+
+} // namespace replace
 

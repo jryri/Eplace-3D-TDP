@@ -77,23 +77,25 @@ int main(int argc, char *argv[])
 
     }
     placedb->showDBInfo();
-    string plPath;
-    if (gArg.GetString("loadpl", &plPath))
-    {
-        //! modules will be moved to center in QP, so if QP is not skipped, loading module locations from an existing pl file is meaningless
-        parser.ReadPLFile(plPath, *placedb, false);
-    }
 
-    QPPlacer *qpplacer = new QPPlacer(placedb);
-    if (!gArg.CheckExist("noQP"))
-    {
-        qpplacer->quadraticPlacement();
-    }
+    
+    // string plPath;
+    // if (gArg.GetString("loadpl", &plPath))
+    // {
+    //     //! modules will be moved to center in QP, so if QP is not skipped, loading module locations from an existing pl file is meaningless
+    //     parser.ReadPLFile(plPath, *placedb, false);
+    // }
 
-    if (gArg.CheckExist("addNoise"))
-    {
-        placedb->addNoise(); // the noise range is [-avgbinStep,avgbinStep]
-    }
+    // QPPlacer *qpplacer = new QPPlacer(placedb);
+    // if (!gArg.CheckExist("noQP"))
+    // {
+    //     qpplacer->quadraticPlacement();
+    // }
+
+    // if (gArg.CheckExist("addNoise"))
+    // {
+    //     placedb->addNoise(); // the noise range is [-avgbinStep,avgbinStep]
+    // }
 
     double mGPTime;
     double mLGTime;
@@ -110,7 +112,6 @@ int main(int argc, char *argv[])
         cout << "Timing optimization disabled!\n";
     }
 
-    EPlacer_2D *eplacer = new EPlacer_2D(placedb);
     OpenroadInterface* openroadInterface = new OpenroadInterface(placedb);
     string initialDEFPath = inital_def_path ;//"./testcase/aes_cipher_top/aes_cipher_top.def";
     string openroadPath = "/usr/bin/openroad";
@@ -124,8 +125,31 @@ int main(int argc, char *argv[])
         targetDensity = 1.0;
     }
 
-    eplacer->setTargetDensity(targetDensity);
-    eplacer->initialization();
+    FirstOrderOptimizer<VECTOR_3D> *opt = nullptr;
+    EPlacer_2D *eplacer = nullptr;
+    EPlacer_3D *eplacer3d = nullptr;
+    
+    // Check if 3DIC mode is enabled
+    if (gArg.CheckExist("3DIC"))
+    {
+        cout << "Using 3D placer for 2D-to-3D shrink test!" << endl;
+        eplacer3d = new EPlacer_3D(placedb);
+        eplacer3d->setTargetDensity(targetDensity);
+        
+        // Use special initialization for 2D-to-3D conversion
+        eplacer3d->testInitialization();  // This includes shrink2DTo3D + placeModulesAtCenter + normal init
+        
+        opt = new EplaceNesterovOpt<VECTOR_3D>(eplacer3d, isTiming, openroadInterface);
+    }
+    else
+    {
+        cout << "Using 2D placer (normal mode)" << endl;
+        eplacer = new EPlacer_2D(placedb);
+        eplacer->setTargetDensity(targetDensity);
+        eplacer->initialization();
+        
+        opt = new EplaceNesterovOpt<VECTOR_3D>(eplacer, isTiming, openroadInterface);
+    }
 
     if (isTiming) {
         cout << "isTiming" << endl;
@@ -133,7 +157,6 @@ int main(int argc, char *argv[])
     else {
         cout << "not isTiming" << endl;
     }
-    FirstOrderOptimizer<VECTOR_3D> *opt = new EplaceNesterovOpt<VECTOR_3D>(eplacer, isTiming, openroadInterface);
 
     if (!gArg.CheckExist("nomGP"))
     {
@@ -144,9 +167,17 @@ int main(int argc, char *argv[])
         time_end(&mGPTime);
 
         cout << "mGP finished!\n";
-        cout << "Final HPWL: " << int(placedb->calcHPWL()) << endl;
+        if (gArg.CheckExist("3DIC")) {
+            cout << "Final HPWL (3D): " << int(placedb->calcHPWL_3D()) << endl;
+        } else {
+            cout << "Final HPWL: " << int(placedb->calcHPWL()) << endl;
+        }
         cout << "mGP time: " << mGPTime << endl;
-        PLOTTING::plotCurrentPlacement("mGP result", placedb);
+        if (gArg.CheckExist("3DIC")) {
+            PLOTTING::plotCurrentPlacement_3D("mGP result", placedb);
+        } else {
+            PLOTTING::plotCurrentPlacement("mGP result", placedb);
+        }
     }
 
     ///////////////////////////////////////////////////
@@ -162,14 +193,27 @@ int main(int argc, char *argv[])
         macroLegalizer->legalization();
         time_end(&mLGTime);
 
-        PLOTTING::plotCurrentPlacement("mLG result", placedb);
-        cout << "mLG finished. HPWL after mLG: " << int(placedb->calcHPWL()) << endl;
+        if (gArg.CheckExist("3DIC")) {
+            PLOTTING::plotCurrentPlacement_3D("mLG result", placedb);
+        } else {
+            PLOTTING::plotCurrentPlacement("mLG result", placedb);
+        }
+        if (gArg.CheckExist("3DIC")) {
+            cout << "mLG finished. HPWL after mLG (3D): " << int(placedb->calcHPWL_3D()) << endl;
+        } else {
+            cout << "mLG finished. HPWL after mLG: " << int(placedb->calcHPWL()) << endl;
+        }
         cout << "mLG time: " << mLGTime << endl;
         // exit(0);
 
         if (!gArg.CheckExist("nocGP"))
         {
-            eplacer->switch2FillerOnly();
+            // Call switch2FillerOnly on appropriate placer
+            if (gArg.CheckExist("3DIC") && eplacer3d) {
+                eplacer3d->switch2FillerOnly();
+            } else if (eplacer) {
+                eplacer->switch2FillerOnly();
+            }
             cout << "filler placement started!\n";
 
             time_start(&FILLERONLYtime);
@@ -178,9 +222,18 @@ int main(int argc, char *argv[])
 
             cout << "filler placement finished!\n";
             cout << "FILLERONLY time: " << mGPTime << endl;
-            PLOTTING::plotCurrentPlacement("FILLERONLY result", placedb);
+            if (gArg.CheckExist("3DIC")) {
+                PLOTTING::plotCurrentPlacement_3D("FILLERONLY result", placedb);
+            } else {
+                PLOTTING::plotCurrentPlacement("FILLERONLY result", placedb);
+            }
 
-            eplacer->switch2cGP();
+            // Call switch2cGP on appropriate placer
+            if (gArg.CheckExist("3DIC") && eplacer3d) {
+                eplacer3d->switch2cGP();
+            } else if (eplacer) {
+                eplacer->switch2cGP();
+            }
             cout << "cGP started!\n";
 
             time_start(&cGPTime);
@@ -188,9 +241,17 @@ int main(int argc, char *argv[])
             time_end(&cGPTime);
 
             cout << "cGP finished!\n";
-            cout << "cGP Final HPWL: " << int(placedb->calcHPWL()) << endl;
+            if (gArg.CheckExist("3DIC")) {
+                cout << "cGP Final HPWL (3D): " << int(placedb->calcHPWL_3D()) << endl;
+            } else {
+                cout << "cGP Final HPWL: " << int(placedb->calcHPWL()) << endl;
+            }
             cout << "cGP time: " << mGPTime << endl;
-            PLOTTING::plotCurrentPlacement("cGP result", placedb);
+            if (gArg.CheckExist("3DIC")) {
+                PLOTTING::plotCurrentPlacement_3D("cGP result", placedb);
+            } else {
+                PLOTTING::plotCurrentPlacement("cGP result", placedb);
+            }
         }
     }
 
@@ -220,13 +281,25 @@ int main(int argc, char *argv[])
         {
             // for std cell design only, since we don't have macro legalizer for now
             cout << "Calling internal legalizer: " << endl;
-            cout << "Global HPWL: " << int(placedb->calcHPWL()) << endl;
+            if (gArg.CheckExist("3DIC")) {
+                cout << "Global HPWL (3D): " << int(placedb->calcHPWL_3D()) << endl;
+            } else {
+                cout << "Global HPWL: " << int(placedb->calcHPWL()) << endl;
+            }
 
             AbacusLegalizer *legalizer = new AbacusLegalizer(placedb);
             legalizer->legalization();
 
-            cout << "Legal HPWL: " << int(placedb->calcHPWL()) << endl;
-            PLOTTING::plotCurrentPlacement("Cell legalized result", placedb);
+            if (gArg.CheckExist("3DIC")) {
+                cout << "Legal HPWL (3D): " << int(placedb->calcHPWL_3D()) << endl;
+            } else {
+                cout << "Legal HPWL: " << int(placedb->calcHPWL()) << endl;
+            }
+            if (gArg.CheckExist("3DIC")) {
+                PLOTTING::plotCurrentPlacement_3D("Cell legalized result", placedb);
+            } else {
+                PLOTTING::plotCurrentPlacement("Cell legalized result", placedb);
+            }
 
             placedb->outputBookShelf("eLG",true);
             placedb->outputDEF("eLP",inital_def_path);
@@ -241,13 +314,25 @@ int main(int argc, char *argv[])
     if (gArg.CheckExist("internalDP"))// currently only works after internal legalization
     {
         cout << "Calling internal detailed placement: " << endl;
-        cout << "HPWL before detailed placement: " << int(placedb->calcHPWL()) << endl;
+        if (gArg.CheckExist("3DIC")) {
+            cout << "HPWL before detailed placement (3D): " << int(placedb->calcHPWL_3D()) << endl;
+        } else {
+            cout << "HPWL before detailed placement: " << int(placedb->calcHPWL()) << endl;
+        }
 
         DetailedPlacer *detailedPlacer = new DetailedPlacer(placedb);
         detailedPlacer->detailedPlacement();
 
-        cout << "HPWL after detailed placement: " << int(placedb->calcHPWL()) << endl;
-        PLOTTING::plotCurrentPlacement("Detailed placement result", placedb);
+        if (gArg.CheckExist("3DIC")) {
+            cout << "HPWL after detailed placement (3D): " << int(placedb->calcHPWL_3D()) << endl;
+        } else {
+            cout << "HPWL after detailed placement: " << int(placedb->calcHPWL()) << endl;
+        }
+        if (gArg.CheckExist("3DIC")) {
+            PLOTTING::plotCurrentPlacement_3D("Detailed placement result", placedb);
+        } else {
+            PLOTTING::plotCurrentPlacement("Detailed placement result", placedb);
+        }
 
         placedb->outputBookShelf("eDP",false);
         placedb->outputDEF("eDP",inital_def_path);

@@ -38,6 +38,7 @@ public:
     PlaceDB()
     {
         layerCount = -1;
+        posshrink = 1.0f;
         moduleCount = -1;
         dbMacroCount = 0;
         commonRowHeight = -1;
@@ -54,12 +55,14 @@ public:
         TNS = 100000;
     };
     int layerCount;  // how many layers? this is for 3dic
+    float posshrink;
     int moduleCount; // number of modules
     int dbMacroCount;
     int netCount;
     int pinCount;
     double commonRowHeight; //! rowHeight that all(most of the times) rows share
-
+    int Z_max;
+    
     CRect coreRegion;   // In 2d placement the core region is just the rectangle that encloses all placement rows(see setCoreRegion), in 3d it might be shrunk. coreRegion should be smaller than the whole chip
     CRect chipRegion;   // Chip Region is obtained with coreRegion and all terminal locations. adapect1 is a good example. This should only be used for plot.
     float totalRowArea; //! area of all placement rows, equal or less than coreRegion area, usually equals coreRegion area. calculated in setCoreRegion
@@ -81,6 +84,15 @@ public:
 
     void setCoreRegion();
     void init_tiers();
+
+    void set3Dmode(int layers);
+    POS_2D shrink(POS_2D pos)
+    {
+        return POS_2D(coreRegion.ll.x + (pos.x - coreRegion.ll.x) * posshrink, coreRegion.ll.y + (pos.y - coreRegion.ll.y) * posshrink);
+    }
+
+    void setZ_max(int z_max) { Z_max = z_max; }
+
 
     Module *addNode(int index, string name, float width, float height); // (frank) 2022-05-13 consider terminal_NI
     Module *addTerminal(int index, string name, float width, float height, bool isFixed, bool isNI);
@@ -123,10 +135,27 @@ public:
     void setModuleCenter_2D(Module *, float, float);
     void setModuleCenter_2D(Module *, POS_3D);
     void setModuleCenter_2D(Module *, VECTOR_3D);
+
+    // 3D versions
+    void setModuleLocation_3D(Module *, float, float, float);
+    void setModuleLocation_3D(Module *, POS_3D);
+    void setModuleCenter_3D(Module *, float, float, float);
+    void setModuleCenter_3D(Module *, POS_3D);
+    void setModuleCenter_3D(Module *, VECTOR_3D);
+
     void setModuleOrientation(Module *, int);
     void setModuleLocation_2D_random(Module *);
+    void setModuleLocation_3D_random(Module *); // 3D version
+    void setModuleLocation_3D_random(Module * , float z); // 3D version
     void moveModule_2D(Module *, VECTOR_2D);
     void moveModule_2D(Module *, VECTOR_2D_INT);
+    
+    // 3D core region management
+    void setCoreRegion3D(float llx, float lly, float llz, float urx, float ury, float urz);
+    void setCoreRegion3D(POS_3D ll, POS_3D ur);
+    float totalRowVolume = 0.0f; // 3D total row volume
+    float defaultModuleDepth = 1.0f; // Default depth for modules that don't have depth specified
+
     void randomPlacment();
     void addNoise();
     void saveNodesLocation();
@@ -143,7 +172,12 @@ public:
     double calcLSE_Wirelength_2D(VECTOR_2D);
     double calcNetBoundPins();
     double calcModuleHPWL(Module *);
-    // double calcModuleHPWLunsafe(Module *);
+    
+    // 3D versions
+    double calcHPWL_3D(); // True 3D HPWL calculation
+    double calcWA_Wirelength_3D(VECTOR_3D);
+    double calcLSE_Wirelength_3D(VECTOR_3D);
+    double calcNetBoundPins_3D();
     double calcModuleHPWLfast(Module *);
 
     void moveNodesCenterToCenter(); // used for initial 2D quadratic placement

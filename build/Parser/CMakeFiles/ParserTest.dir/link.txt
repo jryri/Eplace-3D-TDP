@@ -1,0 +1,1 @@
+/usr/bin/c++ -w -m64 -O3 -fpermissive -std=c++1y -fPIC -fopenmp -funroll-loops -ffast-math -Dcimg_display=1 -rdynamic CMakeFiles/ParserTest.dir/parser_test.o CMakeFiles/ParserTest.dir/parser.o CMakeFiles/ParserTest.dir/__/PlaceCommon/arghandler.o CMakeFiles/ParserTest.dir/__/PlaceCommon/objects.o CMakeFiles/ParserTest.dir/__/PlaceDB/placedb.o -o ParserTest 

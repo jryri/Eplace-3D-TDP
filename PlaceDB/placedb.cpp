@@ -3,6 +3,32 @@
 #include "placedb.h"
 #include "global.h"
 
+void PlaceDB::set3Dmode(int layers)
+{
+    layerCount = layers;
+    cout << "Set 3D mode with layer count: " << layerCount << endl;
+    posshrink = sqrt(1.0f / layerCount);
+    cout << "posshrink: " << posshrink << endl;
+    
+    // float bottom = coreRegion.ll.y * posshrink;
+    // float top = coreRegion.ur.y * posshrink;
+    // float left = coreRegion.ll.x * posshrink;
+    // float right = coreRegion.ur.x * posshrink;
+
+    // coreRegion.ll = POS_2D(left, bottom);
+    // coreRegion.ur = POS_2D(right, top);
+
+    // cout << "Set core region from site info: ";
+    // coreRegion.Print();
+
+    // //terminal position shrink 
+    // for (Module *terminal : dbTerminals)
+    // {
+    //     terminal->setLocation_2D(terminal->getLocation_2D().x * posshrink, terminal->getLocation_2D().y * posshrink);
+    // }
+
+}
+
 void PlaceDB::setCoreRegion()
 {
     float bottom = dbSiteRows.front().bottom;
@@ -24,8 +50,19 @@ void PlaceDB::setCoreRegion()
     coreRegion.ll = POS_2D(left, bottom);
     coreRegion.ur = POS_2D(right, top);
 
+    // shrink the core region to the 2D region
+    coreRegion.ll = shrink(coreRegion.ll);
+    coreRegion.ur = shrink(coreRegion.ur);
+
     cout << "Set core region from site info: ";
     coreRegion.Print();
+
+    //terminal position shrink 
+    for (Module *terminal : dbTerminals)
+    {
+        POS_3D loc = terminal->getLocation();
+        terminal->setLocation_2D(loc.x * posshrink, loc.y * posshrink);
+    }
 }
 
 void PlaceDB::init_tiers()
@@ -314,6 +351,17 @@ double PlaceDB::calcHPWL() //! parallel this?
     return HPWL;
 }
 
+// True 3D HPWL calculation
+double PlaceDB::calcHPWL_3D()
+{
+    double HPWL = 0;
+    for (Net *curNet : dbNets)
+    {
+        HPWL += curNet->calcBoundPin_3D(); // Use dedicated 3D version
+    }
+    return HPWL;
+}
+
 double PlaceDB::calcWA_Wirelength_2D(VECTOR_2D invertedGamma)
 {
     double WA = 0;
@@ -340,6 +388,37 @@ double PlaceDB::calcNetBoundPins()
     for (Net *curNet : dbNets)
     {
         HPWL += curNet->calcBoundPin();
+    }
+    return HPWL;
+}
+
+// 3D wirelength calculation methods
+double PlaceDB::calcWA_Wirelength_3D(VECTOR_3D invertedGamma)
+{
+    double WA = 0;
+    for (Net *curNet : dbNets)
+    {
+        WA += curNet->calcWirelengthWA_3D(invertedGamma);
+    }
+    return WA;
+}
+
+double PlaceDB::calcLSE_Wirelength_3D(VECTOR_3D invertedGamma)
+{
+    double LSE = 0;
+    for (Net *curNet : dbNets)
+    {
+        LSE += curNet->calcWirelengthLSE_3D(invertedGamma);
+    }
+    return LSE;
+}
+
+double PlaceDB::calcNetBoundPins_3D()
+{
+    double HPWL = 0;
+    for (Net *curNet : dbNets)
+    {
+        HPWL += curNet->calcBoundPin_3D();
     }
     return HPWL;
 }
@@ -976,19 +1055,21 @@ void PlaceDB::outputPL()
 
     for (Module *curNode : dbNodes)
     {
-        fprintf(out, "%s\t%.0f\t%.0f : %s",
+        fprintf(out, "%s\t%.0f\t%.0f\t%.0f : %s",
                 curNode->name.c_str(),
                 curNode->getLL_2D().x,
                 curNode->getLL_2D().y,
+                curNode->getLL_3D().z,
                 orientN);
         fprintf(out, "\n");
     }
     for (Module *curTerminal : dbTerminals)
     {
-        fprintf(out, "%s\t%.0f\t%.0f : %s",
+        fprintf(out, "%s\t%.0f\t%.0f\t%.0f : %s",
                 curTerminal->name.c_str(),
                 curTerminal->getLL_2D().x,
                 curTerminal->getLL_2D().y,
+                curTerminal->getLL_3D().z,
                 orientN);
 
         if (curTerminal->isNI)
@@ -1305,4 +1386,154 @@ bool PlaceDB::isConnected(Module *module1, Module *module2)
         }
     }
     return false;
+}
+
+// 3D methods implementation
+void PlaceDB::setModuleLocation_3D(Module *module, float x, float y, float z)
+{
+    // Check if x,y,z are legal (inside the 3D chip region)
+    if (!module->isFixed)
+    {
+        if (x < coreRegion.ll.x)
+        {
+            x = coreRegion.ll.x;
+        }
+        if (x + module->width > coreRegion.ur.x)
+        {
+            x = coreRegion.ur.x - module->width - EPS;
+        }
+        if (y < coreRegion.ll.y)
+        {
+            y = coreRegion.ll.y;
+        }
+        if (y + module->height > coreRegion.ur.y)
+        {
+            y = coreRegion.ur.y - module->height - EPS;
+        }
+        // Z-axis boundary checking
+        if (z < coreRegion.ll_z)
+        {
+            z = coreRegion.ll_z;
+        }
+        if (z + module->depth > coreRegion.ur_z)
+        {
+            z = coreRegion.ur_z - module->depth - EPS;
+        }
+    }
+
+    module->setLocation_3D(x, y, z);
+    for (Pin *curPin : module->modulePins)
+    {
+        curPin->calculateAbsolutePos();
+    }
+}
+
+void PlaceDB::setModuleLocation_3D(Module *module, POS_3D pos)
+{
+    setModuleLocation_3D(module, pos.x, pos.y, pos.z);
+}
+
+void PlaceDB::setModuleCenter_3D(Module *module, float x, float y, float z)
+{
+    // Check if x,y,z are legal (inside the 3D chip region) with center-based calculations
+    if (!module->isFixed)
+    {
+        if (x - 0.5 * module->width < coreRegion.ll.x)
+        {
+            x = coreRegion.ll.x + 0.5 * module->width + EPS;
+        }
+        if (x + 0.5 * module->width > coreRegion.ur.x)
+        {
+            x = coreRegion.ur.x - 0.5 * module->width - EPS;
+        }
+        if (y - 0.5 * module->height < coreRegion.ll.y)
+        {
+            y = coreRegion.ll.y + 0.5 * module->height + EPS;
+        }
+        if (y + 0.5 * module->height > coreRegion.ur.y)
+        {
+            y = coreRegion.ur.y - 0.5 * module->height - EPS;
+        }
+        // Z-axis center-based boundary checking
+        if (z - 0.5 * module->depth < coreRegion.ll_z)
+        {
+            z = coreRegion.ll_z + 0.5 * module->depth + EPS;
+        }
+        if (z + 0.5 * module->depth > coreRegion.ur_z)
+        {
+            z = coreRegion.ur_z - 0.5 * module->depth - EPS;
+        }
+    }
+
+    module->setCenter_3D(x, y, z);
+    for (Pin *curPin : module->modulePins)
+    {
+        curPin->calculateAbsolutePos();
+    }
+}
+
+void PlaceDB::setModuleCenter_3D(Module *module, POS_3D pos)
+{
+    setModuleCenter_3D(module, pos.x, pos.y, pos.z);
+}
+
+void PlaceDB::setModuleCenter_3D(Module *module, VECTOR_3D pos)
+{
+    setModuleCenter_3D(module, pos.x, pos.y, pos.z);
+}
+void PlaceDB::setModuleLocation_3D_random(Module *module, float z){
+    assert(module);
+    setModuleLocation_3D_random(module);
+    module->setLocation_3D(module->getLocation().x, module->getLocation().y, z);
+}
+
+void PlaceDB::setModuleLocation_3D_random(Module *module)
+{
+    assert(module);
+    float x = rand();
+    float y = rand();
+    float z = rand();
+
+    assert(coreRegion.ur.x > coreRegion.ll.x);
+    assert(coreRegion.ur.y > coreRegion.ll.y);
+    assert(coreRegion.ur_z > coreRegion.ll_z);
+
+    float potentialRegionWidth = coreRegion.ur.x - coreRegion.ll.x;
+    float potentialRegionHeight = coreRegion.ur.y - coreRegion.ll.y;
+    float potentialRegionDepth = coreRegion.ur_z - coreRegion.ll_z;
+
+    potentialRegionWidth -= module->getWidth();
+    potentialRegionHeight -= module->getHeight();
+    potentialRegionDepth -= module->getDepth();
+    
+    // 防止負數區域導致負座標（Z 軸象限限制）
+    potentialRegionWidth = max(0.0f, potentialRegionWidth);
+    potentialRegionHeight = max(0.0f, potentialRegionHeight);
+    potentialRegionDepth = max(0.0f, potentialRegionDepth);
+
+    float RAND_MAX_INVERSE = (float)1.0 / RAND_MAX;
+    x = coreRegion.ll.x + x * RAND_MAX_INVERSE * potentialRegionWidth;
+    y = coreRegion.ll.y + y * RAND_MAX_INVERSE * potentialRegionHeight;
+    z = coreRegion.ll_z + z * RAND_MAX_INVERSE * potentialRegionDepth;
+
+    setModuleLocation_3D(module, x, y, z);
+}
+
+// 3D core region management methods
+void PlaceDB::setCoreRegion3D(float llx, float lly, float llz, float urx, float ury, float urz)
+{
+    coreRegion.ll.x = llx;
+    coreRegion.ll.y = lly;
+    coreRegion.ll_z = llz;
+    coreRegion.ur.x = urx;
+    coreRegion.ur.y = ury;
+    coreRegion.ur_z = urz;
+    
+    cout << "3D Core region set: [" << llx << "," << lly << "," << llz << "] to [" 
+         << urx << "," << ury << "," << urz << "]" << endl;
+}
+
+void PlaceDB::setCoreRegion3D(POS_3D ll, POS_3D ur)
+{
+    setCoreRegion3D(ll.x, ll.y, ll.z, ur.x, ur.y, ur.z);
 }

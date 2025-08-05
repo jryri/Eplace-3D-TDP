@@ -54,6 +54,57 @@ class FFT_2D {
     void init();
 };
 
+class FFT_3D {
+  public:
+    FFT_3D();
+    FFT_3D(int binCntX, int binCntY, int binCntZ, float binSizeX, float binSizeY, float binSizeZ);
+    ~FFT_3D();
+
+    // input func
+    void updateDensity(int x, int y, int z, float density);
+
+    // do FFT
+    void doFFT();
+
+    // returning func
+    std::tuple<float, float, float> getElectroForce(int x, int y, int z) const;
+    float getElectroPhi(int x, int y, int z) const;
+
+  private:
+    // 3D array; dimensions: binCntX_ x binCntY_ x binCntZ_
+    float*** binDensity_;
+    float*** electroPhi_;
+    float*** electroForceX_;
+    float*** electroForceY_;
+    float*** electroForceZ_;
+
+    // cos/sin table
+    std::vector<float> csTable_;
+
+    // wx, wy, wz arrays
+    std::vector<float> wx_;
+    std::vector<float> wxSquare_;
+    std::vector<float> wy_;
+    std::vector<float> wySquare_;
+    std::vector<float> wz_;
+    std::vector<float> wzSquare_;
+
+    // work area for bit reversal
+    std::vector<int> workArea_;
+    
+    // Temporary work array for 3D FFT operations
+    std::vector<float> tempWorkArray_;
+
+    int binCntX_;
+    int binCntY_;
+    int binCntZ_;
+    float binSizeX_;
+    float binSizeY_;
+    float binSizeZ_;
+
+    void init();
+};
+
 void makewt(int nw, int *ip, float *w);
 void cftfsub(int n, float *a, int *ip, int nw, float *w);
 void cftbsub(int n, float *a, int *ip, int nw, float *w);
@@ -114,6 +165,11 @@ void ddscct3d(int, int, int, int isgn, float ***, float *, int *, float *);
 void ddcsct3d(int, int, int, int isgn, float ***, float *, int *, float *);
 void ddccst3d(int, int, int, int isgn, float ***, float *, int *, float *);
 
-}
+// 3D FFT functions from fftsg3d.cpp  
+void ddct3d(int n1, int n2, int n3, int isgn, float ***a, float *t, int *ip, float *w);
+void ddxt3da_sub(int n1, int n2, int n3, int ics2, int ics3, int isgn, float ***a, float *t, int *ip, float *w);
+void ddxt3db_sub(int n1, int n2, int n3, int ics1, int isgn, float ***a, float *t, int *ip, float *w);
+
+} // namespace replace
 
 #endif

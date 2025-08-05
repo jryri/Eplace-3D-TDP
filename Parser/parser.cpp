@@ -97,6 +97,10 @@ int BookshelfParser::ReadSCLFile(string file, PlaceDB &db)
 		}
 		else if (strcmp(tmp1, "Coordinate") == 0)
 		{
+			if (vSites.empty()) {
+				cerr << "Error: 'Coordinate' found before a 'SITE' definition in .scl file." << endl;
+				exit(1);
+			}
 			vSites.back().bottom = atof(tmp3);
 			////test code
 			// printf("get coordinate %f\n", atof( tmp3 ) );
@@ -104,6 +108,10 @@ int BookshelfParser::ReadSCLFile(string file, PlaceDB &db)
 		}
 		else if (strcmp(tmp1, "Height") == 0)
 		{
+			if (vSites.empty()) {
+				cerr << "Error: 'Height' found before a 'SITE' definition in .scl file." << endl;
+				exit(1);
+			}
 			vSites.back().height = atof(tmp3);
 			height = atof(tmp3);
 			////test code

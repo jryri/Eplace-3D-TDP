@@ -12,12 +12,18 @@ namespace PLOTTING
                         Black[] = {0, 0, 0},
                         Green[] = {0, 150, 0},
                         Orange[] = {255, 165, 0},
-                        Red[] = {255, 0, 0};
+                        Red[] = {255, 0, 0},
+                        Purple[] = {128, 0, 128},    // 紫色 - 用於3D頂層
+                        Cyan[] = {0, 255, 255},      // 青色 - 用於3D頂層macro
+                        DarkRed[] = {139, 0, 0},     // 深紅 - 用於3D底層
+                        DarkOrange[] = {255, 140, 0}; // 深橙 - 用於3D底層macro
     int getX(float, float, float);
     int getY(float, float, float, float);
 
     void plotCurrentPlacement(string, PlaceDB *);
+    void plotCurrentPlacement_3D(string, PlaceDB *);
     void plotEPlace_2D(string, EPlacer_2D *);
+    void plotEPlace_3D(string, EPlacer_3D *);
 }
 
 #endif

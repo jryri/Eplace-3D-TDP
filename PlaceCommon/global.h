@@ -159,6 +159,26 @@ struct VECTOR_2D_INT
     }
 };
 
+struct VECTOR_3D_INT
+{
+    int x;
+    int y;
+    int z;
+    VECTOR_3D_INT()
+    {
+        SetZero();
+    }
+    inline void SetZero()
+    {
+        x = y = z = 0;
+    }
+    friend inline std::ostream &operator<<(std::ostream &os, const VECTOR_3D_INT &vec)
+    {
+        os << "[" << vec.x << "," << vec.y << "," << vec.z << "]";
+        return os;
+    }
+};
+
 struct VECTOR_3D
 {
     float x;
@@ -268,6 +288,11 @@ public:
     }
     POS_2D ll; // ll: lower left coor
     POS_2D ur; // ur: upper right coor
+    
+    // Add 3D support by adding Z coordinates
+    float ll_z = 0.0f; // lower front Z coordinate
+    float ur_z = 0.0f; // upper back Z coordinate
+    
     float getWidth()
     {
         float width = ur.x - ll.x;
@@ -280,6 +305,11 @@ public:
         assert(height > 0.0);
         return height;
     }
+    float getDepth() // 3D depth
+    {
+        float depth = ur_z - ll_z;
+        return depth > 0.0 ? depth : 1.0f; // Default depth of 1.0 for 2D compatibility
+    }
     POS_2D getCenter()
     {
         POS_2D center = ll;
@@ -287,13 +317,31 @@ public:
         center.y += 0.5 * this->getHeight();
         return center;
     }
+    POS_3D getCenter3D() // 3D center
+    {
+        POS_3D center;
+        center.x = ll.x + 0.5 * this->getWidth();
+        center.y = ll.y + 0.5 * this->getHeight();
+        center.z = ll_z + 0.5 * this->getDepth();
+        return center;
+    }
     float getArea()
     {
         return getHeight() * getWidth();
     }
+    float getVolume() // 3D volume
+    {
+        return getHeight() * getWidth() * getDepth();
+    }
     bool inside(POS_2D &point)
     {
         return (point.x >= ll.x) && (point.x <= ur.x) && (point.y >= ll.y) && (point.y <= ur.y);
+    }
+    bool inside3D(POS_3D &point) // 3D version
+    {
+        return (point.x >= ll.x) && (point.x <= ur.x) && 
+               (point.y >= ll.y) && (point.y <= ur.y) &&
+               (point.z >= ll_z) && (point.z <= ur_z);
     }
     friend inline std::ostream &operator<<(std::ostream &os, const CRect &rect)
     {
@@ -448,7 +496,7 @@ inline double getOverlap(double x1, double x2, double x3, double x4) // two line
     }
     else
     {
-        return (overlapStart - overlapEnd);
+        return (overlapEnd - overlapStart); // Fixed: should be overlapEnd - overlapStart, not overlapStart - overlapEnd
     }
 }
 
@@ -498,6 +546,54 @@ inline double getOverlapArea_2D(POS_2D ll1, POS_2D ur1, POS_2D ll2, POS_2D ur2)
     rect2.ur = ur2;
 
     return getOverlapArea_2D(rect1, rect2);
+}
+
+// 3D overlap volume calculation functions
+inline double getOverlapVolume(double left1, double bottom1, double front1, double right1, double top1, double back1,
+                               double left2, double bottom2, double front2, double right2, double top2, double back2)
+{
+    assert(left1 <= right1);
+    assert(bottom1 <= top1);
+    assert(front1 <= back1);
+    assert(left2 <= right2);
+    
+    // Add debugging info before assertion failure
+    if (bottom2 > top2) {
+        cout << "ERROR: bottom2 > top2 in getOverlapVolume!" << endl;
+        cout << "Object2 coordinates: left=" << left2 << " bottom=" << bottom2 << " front=" << front2 << endl;
+        cout << "                     right=" << right2 << " top=" << top2 << " back=" << back2 << endl;
+        cout << "bottom2=" << bottom2 << " top2=" << top2 << " (bottom2-top2=" << (bottom2-top2) << ")" << endl;
+    }
+    
+    assert(bottom2 <= top2);
+    assert(front2 <= back2);
+
+    double rangeX = getOverlap(left1, right1, left2, right2);
+    if (rangeX == 0)
+        return 0;
+
+    double rangeY = getOverlap(bottom1, top1, bottom2, top2);
+    if (rangeY == 0)
+        return 0;
+
+    double rangeZ = getOverlap(front1, back1, front2, back2);
+    if (rangeZ == 0)
+        return 0;
+
+    return (rangeX * rangeY * rangeZ);
+}
+
+inline double getOverlapVolume_3D(POS_3D ll1, POS_3D ur1, POS_3D ll2, POS_3D ur2)
+{
+    // Debug: Check coordinates before calling getOverlapVolume
+    if (ll2.y > ur2.y) {
+        cout << "DEBUG: getOverlapVolume_3D called with invalid Object2 Y coordinates!" << endl;
+        cout << "  Object1: LL=" << ll1 << " UR=" << ur1 << endl;
+        cout << "  Object2: LL=" << ll2 << " UR=" << ur2 << " (INVALID: ll2.y > ur2.y)" << endl;
+    }
+    
+    return getOverlapVolume(ll1.x, ll1.y, ll1.z, ur1.x, ur1.y, ur1.z,
+                           ll2.x, ll2.y, ll2.z, ur2.x, ur2.y, ur2.z);
 }
 
 inline float L2NORM(VECTOR_3D a)

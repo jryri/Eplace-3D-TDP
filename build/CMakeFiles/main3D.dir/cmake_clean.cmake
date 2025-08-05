@@ -1,0 +1,41 @@
+file(REMOVE_RECURSE
+  "CMakeFiles/main3D.dir/DetailedPlacement/detailed.o"
+  "CMakeFiles/main3D.dir/DetailedPlacement/detailed.o.d"
+  "CMakeFiles/main3D.dir/EPlace/eplace.o"
+  "CMakeFiles/main3D.dir/EPlace/eplace.o.d"
+  "CMakeFiles/main3D.dir/EPlace/eplace_3d.o"
+  "CMakeFiles/main3D.dir/EPlace/eplace_3d.o.d"
+  "CMakeFiles/main3D.dir/FFT/fft.o"
+  "CMakeFiles/main3D.dir/FFT/fft.o.d"
+  "CMakeFiles/main3D.dir/FFT/fftsg.o"
+  "CMakeFiles/main3D.dir/FFT/fftsg.o.d"
+  "CMakeFiles/main3D.dir/FFT/fftsg2d.o"
+  "CMakeFiles/main3D.dir/FFT/fftsg2d.o.d"
+  "CMakeFiles/main3D.dir/FFT/fftsg3d.o"
+  "CMakeFiles/main3D.dir/FFT/fftsg3d.o.d"
+  "CMakeFiles/main3D.dir/Legalization/legalizer.o"
+  "CMakeFiles/main3D.dir/Legalization/legalizer.o.d"
+  "CMakeFiles/main3D.dir/OpenroadInterface/interface.o"
+  "CMakeFiles/main3D.dir/OpenroadInterface/interface.o.d"
+  "CMakeFiles/main3D.dir/Parser/parser.o"
+  "CMakeFiles/main3D.dir/Parser/parser.o.d"
+  "CMakeFiles/main3D.dir/PlaceCommon/arghandler.o"
+  "CMakeFiles/main3D.dir/PlaceCommon/arghandler.o.d"
+  "CMakeFiles/main3D.dir/PlaceCommon/objects.o"
+  "CMakeFiles/main3D.dir/PlaceCommon/objects.o.d"
+  "CMakeFiles/main3D.dir/PlaceDB/placedb.o"
+  "CMakeFiles/main3D.dir/PlaceDB/placedb.o.d"
+  "CMakeFiles/main3D.dir/Plot/plot.o"
+  "CMakeFiles/main3D.dir/Plot/plot.o.d"
+  "CMakeFiles/main3D.dir/QPlace/qplace.o"
+  "CMakeFiles/main3D.dir/QPlace/qplace.o.d"
+  "CMakeFiles/main3D.dir/main/ePlace_main.o"
+  "CMakeFiles/main3D.dir/main/ePlace_main.o.d"
+  "main3D"
+  "main3D.pdb"
+)
+
+# Per-language clean rules from dependency scanning.
+foreach(lang CXX)
+  include(CMakeFiles/main3D.dir/cmake_clean_${lang}.cmake OPTIONAL)
+endforeach()
