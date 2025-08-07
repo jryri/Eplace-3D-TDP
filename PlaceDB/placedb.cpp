@@ -357,7 +357,17 @@ double PlaceDB::calcHPWL_3D()
     double HPWL = 0;
     for (Net *curNet : dbNets)
     {
-        HPWL += curNet->calcBoundPin_3D(); // Use dedicated 3D version
+        HPWL += curNet->calcBoundPin_3D(defaultModuleDepth); // Use dedicated 3D version
+    }
+    return HPWL;
+}
+
+double PlaceDB::calcBIHPWL()
+{
+    double HPWL = 0;
+    for (Net *curNet : dbNets)
+    {
+        HPWL += curNet->calcNetBIHPWL(defaultModuleDepth);
     }
     return HPWL;
 }
@@ -403,6 +413,16 @@ double PlaceDB::calcWA_Wirelength_3D(VECTOR_3D invertedGamma)
     return WA;
 }
 
+double PlaceDB::calcWA_BIHPWL_3D(VECTOR_3D invertedGamma)
+{
+    double WA = 0;
+    for (Net *curNet : dbNets)
+    {
+        WA += curNet->calcWirelengthWA_BIHPWL_3D(invertedGamma, defaultModuleDepth);
+    }
+    return WA;
+}
+
 double PlaceDB::calcLSE_Wirelength_3D(VECTOR_3D invertedGamma)
 {
     double LSE = 0;
@@ -413,14 +433,35 @@ double PlaceDB::calcLSE_Wirelength_3D(VECTOR_3D invertedGamma)
     return LSE;
 }
 
-double PlaceDB::calcNetBoundPins_3D()
+
+double PlaceDB::calcWA_Wirelength_Z(VECTOR_3D invertedGamma)
+{
+    double WA = 0;
+    for (Net *curNet : dbNets)
+    {
+        WA += curNet->calcWirelengthWA_Z(invertedGamma);
+    }
+    return WA;
+}
+
+double PlaceDB::calcNetBoundPins_3D(float defaultModuleDepth)
 {
     double HPWL = 0;
     for (Net *curNet : dbNets)
     {
-        HPWL += curNet->calcBoundPin_3D();
+        HPWL += curNet->calcBoundPin_3D(defaultModuleDepth);
     }
     return HPWL;
+}
+
+int PlaceDB::calcCutSize()
+{
+    int cutSize = 0;
+    for (Net *curNet : dbNets)
+    {
+        cutSize += curNet->isPartitioned;
+    }
+    return cutSize;
 }
 
 double PlaceDB::calcModuleHPWL(Module *curModule) //! assume there are no 2 pins in one module belong to a same net
@@ -432,6 +473,7 @@ double PlaceDB::calcModuleHPWL(Module *curModule) //! assume there are no 2 pins
     }
     return HPWL;
 }
+
 
 // double PlaceDB::calcModuleHPWLunsafe(Module *curModule)
 // {
@@ -1536,4 +1578,59 @@ void PlaceDB::setCoreRegion3D(float llx, float lly, float llz, float urx, float 
 void PlaceDB::setCoreRegion3D(POS_3D ll, POS_3D ur)
 {
     setCoreRegion3D(ll.x, ll.y, ll.z, ur.x, ur.y, ur.z);
+}
+
+void PlaceDB::generate_hgr_file(const std::string& filename) {
+    std::ofstream hgr_file(filename);
+    if (!hgr_file.is_open()) {
+        std::cerr << "Error: Could not open file " << filename << " for writing." << std::endl;
+        return;
+    }
+
+    // Header: num_hedges num_vertices format
+    hgr_file << dbNets.size() << " " << dbNodes.size() << std::endl;
+
+    // Hyperedge weights and pins
+    for (const auto& net : dbNets) {
+        for (const auto& pin : net->netPins) {
+            if (pin->module->isNI || pin->module->isFixed) continue;
+            hgr_file << pin->module->idx + 1 << " ";
+        }
+        hgr_file << std::endl;
+    }
+
+    hgr_file.close();
+}
+
+
+void PlaceDB::call_shmetis_and_set_z() {
+    std::string benchmarkName;
+    gArg.GetString("benchmarkName", &benchmarkName);
+    std::string hgr_filename = benchmarkName + ".hgr";
+    
+    generate_hgr_file(hgr_filename);
+
+    std::string command = "./shmetis " + hgr_filename + " 2 5";
+    int result = system(command.c_str());
+
+    if (result != 0) {
+        std::cerr << "Error: shmetis execution failed." << std::endl;
+        return;
+    }
+
+    std::string partition_filename = hgr_filename + ".part.2";
+    std::ifstream partition_file(partition_filename);
+    if (!partition_file.is_open()) {
+        std::cerr << "Error: Could not open partition file " << partition_filename << std::endl;
+        return;
+    }
+
+    int partition;
+    for (const auto& node : dbNodes) {
+        partition_file >> partition;
+        float z = (partition == 0) ?  0  : defaultModuleDepth;
+        node->setLocation_3D(node->getLocation().x, node->getLocation().y, z);
+    }
+
+    partition_file.close();
 }

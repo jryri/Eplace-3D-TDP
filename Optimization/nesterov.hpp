@@ -108,15 +108,6 @@ private:
         if (placer3D) return placer3D->globalDensityOverflow;
         return 0.0f;
     }
-    float getGlobalDensityOverflow_top() {
-        if (placer3D) return placer3D->globalDensityOverflow_top;
-        return 0.0f;
-    }
-    float getGlobalDensityOverflow_bottom() {
-        if (placer3D) return placer3D->globalDensityOverflow_bottom;
-        return 0.0f;
-    }
-
     
     int getPlacementStage() {
         if (placer2D) return placer2D->placementStage;
@@ -153,26 +144,19 @@ bool EplaceNesterovOpt<T>::stop_condition()
 
     bool judge;
     bool judge_ov3D;
-    bool judge_ov2D_bottom,judge_ov2D_top,judge_slack, judge_max;
+    bool judge_slack, judge_max;
     switch (getPlacementStage())
     {
     case mGP:
-        judge_ov3D = (getGlobalDensityOverflow() < targetOverflow );
-        judge_ov2D_bottom = (getGlobalDensityOverflow_bottom() < targetOverflow );
-        judge_ov2D_top = (getGlobalDensityOverflow_top() < targetOverflow );
-        judge_slack = false ;//(iter_count > IGNORE_ITERATION) && ( placer->getJudgeTNS()); // 0.1 is a magic number, see RePlAce code opt.cpp line 1523
+        judge_ov3D = (getGlobalDensityOverflow() < targetOverflow);
+        judge_slack = false; // (iter_count > IGNORE_ITERATION) && ( placer->getJudgeTNS()); 
         judge_max = (iter_count > MAX_ITERATION);
-        judge = (judge_ov3D) || judge_slack || judge_max;
-
-        // judge = (judge_ov2D_bottom && judge_ov2D_top) || judge_slack || judge_max;
-        // cout << "judge_ov: " << judge_ov << ", judge_slack
+        judge = judge_ov3D || judge_slack || judge_max;
         
-        // judge = (iter_count > IGNORE_ITERATION);
         if (judge)
         {
             setMGPIterationCount(iter_count);
         }
-        // return (placer->globalDensityOverflow < targetOverflow) || (iter_count > MAX_ITERATION);
         return judge;
         break;
     case FILLERONLY:
@@ -185,8 +169,6 @@ bool EplaceNesterovOpt<T>::stop_condition()
         cerr << "INCORRECT PLACEMENT STAGE!\n";
         exit(0);
     }
-
-   
 }
 
 template <typename T>

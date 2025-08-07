@@ -18,7 +18,6 @@ enum PLACEMENT_STAGE
     mGP,
     FILLERONLY,
     cGP
-
 };
 
 class Bin_2D;
@@ -204,7 +203,6 @@ public:
 
         placementStage = mGP;
         mGPIterationCount=0;
-        
     }
     void setTargetDensity(float);
     void setPlacementStage(int);
@@ -277,6 +275,7 @@ public:
     vector<VECTOR_3D> wirelengthGradient;    // store wirelength gradient for nodes only
     vector<VECTOR_3D> p2pattractionGradient; // store p2p attraction gradient for nodes only
     vector<VECTOR_3D> displacementGradient;  // store displacement gradient for nodes only
+    vector<VECTOR_3D> cutsizeGradient;       // store cutsize gradient for nodes only
     vector<VECTOR_3D> densityGradient;       // store density gradient for fillers nodes
     vector<VECTOR_3D> totalGradient;         // total gradient of objective function f
     vector<VECTOR_3D> fillerGradient;
@@ -284,13 +283,13 @@ public:
 
     float targetDensity;         //!!!!!! so important
     float globalDensityOverflow; // !!!!! so important, tau
-    float globalDensityOverflow_top;
-    float globalDensityOverflow_bottom;
     VECTOR_3D invertedGamma;     // gamma of the wa wirelength model, now 3D
 
     float lambda; // penalty factor
     float displacementFactor; // displacement factor
     float beta; 
+    float balanceFactor;
+    void balanceFactorUpdate();
 
     double lastHPWL;
     double curTNS;
@@ -310,8 +309,6 @@ public:
 
         targetDensity = 0;
         globalDensityOverflow = 0;
-        globalDensityOverflow_top = 0;
-        globalDensityOverflow_bottom = 0;
         invertedGamma.SetZero();
         lambda = 0.0;
         beta = 2.5e-5;  
@@ -347,6 +344,7 @@ public:
     void densityOverflowUpdate(); // 3D version - called in wirelengthGradientUpdate()
     void wirelengthGradientUpdate(); // 3D version
     void p2pattractionGradientUpdate(); // 3D version
+    void cutsizeGradientUpdate(); // 3D version
     void displacementGradientUpdate(); // 3D version
     void densityGradientUpdate(); // 3D version
 

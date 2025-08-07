@@ -28,6 +28,7 @@ public:
         idx = index;
     }
     int idx;
+    bool isPartitioned;
     vector<Pin *> netPins;
     //! boundPin pointers, used for quadratic placement utilizing bound2bound net model
     Pin *boundPinXmin;
@@ -37,42 +38,83 @@ public:
     Pin *boundPinZmin; // for 3D
     Pin *boundPinZmax; // for 3D
 
+    Pin *boundPinTopXmax;
+    Pin *boundPinTopXmin;
+    Pin *boundPinTopYmax;
+    Pin *boundPinTopYmin;
+    Pin *boundPinBottomXmax;
+    Pin *boundPinBottomXmin;
+    Pin *boundPinBottomYmax;
+    Pin *boundPinBottomYmin;
+
     VECTOR_3D numeratorMax_WA;
     VECTOR_3D denominatorMax_WA;
     VECTOR_3D numeratorMin_WA;
     VECTOR_3D denominatorMin_WA;
 
+    VECTOR_3D top_numeratorMax_WA;
+    VECTOR_3D top_denominatorMax_WA;
+    VECTOR_3D top_numeratorMin_WA;
+    VECTOR_3D top_denominatorMin_WA;
+    VECTOR_3D bottom_numeratorMax_WA;
+    VECTOR_3D bottom_denominatorMax_WA;
+    VECTOR_3D bottom_numeratorMin_WA;
+    VECTOR_3D bottom_denominatorMin_WA;
+
     VECTOR_3D sumMax_LSE;
     VECTOR_3D sumMin_LSE;
+
+    bool isBIHPWL_Component; // for BIHPWL wirelength model
 
     void init()
     {
         idx = 0;
+        isPartitioned = false;
+        isBIHPWL_Component = false;
         netPins.clear();
         clearBoundPins();
         numeratorMax_WA.SetZero();
         denominatorMin_WA.SetZero();
         numeratorMax_WA.SetZero();
         denominatorMin_WA.SetZero();
+
+        top_numeratorMax_WA.SetZero();
+        top_denominatorMax_WA.SetZero();
+        top_numeratorMin_WA.SetZero();
+        top_denominatorMin_WA.SetZero();
+        bottom_numeratorMax_WA.SetZero();
+        bottom_denominatorMax_WA.SetZero();
+        bottom_numeratorMin_WA.SetZero();
+        bottom_denominatorMin_WA.SetZero();
+
+        sumMax_LSE.SetZero();
+        sumMin_LSE.SetZero();
     }
     void addPin(Pin *);
     int getPinCount();
     void allocateMemoryForPin(int);
     double calcNetHPWL();
     double calcBoundPin();
+    double calcNetBIHPWL(float);
     void clearBoundPins();
     double calcWirelengthWA_2D(VECTOR_2D);
+
     double calcWirelengthLSE_2D(VECTOR_2D);
     VECTOR_2D getWirelengthGradientWA_2D(VECTOR_2D, Pin *);
     VECTOR_2D getWirelengthGradientLSE_2D(VECTOR_2D, Pin *);
     VECTOR_2D getP2pAttractionGradient_2D(Pin *, PlaceDB* );
     
     // 3D versions
-    double calcBoundPin_3D(); // True 3D version without Z=0 assertion
+    double calcBoundPin_3D(float defaultModuleDepth); // True 3D version without Z=0 assertion
     double calcWirelengthWA_3D(VECTOR_3D);
+    double calcWirelengthWA_BIHPWL_3D(VECTOR_3D, float);
     double calcWirelengthLSE_3D(VECTOR_3D);
+    double calcWirelengthWA_Z(VECTOR_3D);
     VECTOR_3D getWirelengthGradientWA_3D(VECTOR_3D, Pin *);
     VECTOR_3D getWirelengthGradientLSE_3D(VECTOR_3D, Pin *);
+    VECTOR_3D getWirelengthGradientBIHPWL_3D(VECTOR_3D, Pin *, float);
+    VECTOR_3D getWirelengthGradient_Z_FDA(Pin *, float);
+    VECTOR_3D getCutsizeGradient_3D(VECTOR_3D, Pin *);
 };
 
 class Pin
@@ -229,6 +271,9 @@ private:
     void setLocation_3D(float, float, float); // 3D version
     void setInitialLocation_3D(float, float, float); // 3D version
     void setCenter_3D(float, float, float); // 3D version
+
+    friend class Net; 
+    friend class Pin;
 };
 
 class Row

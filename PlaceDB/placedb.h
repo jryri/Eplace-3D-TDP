@@ -147,6 +147,10 @@ public:
     void setModuleLocation_2D_random(Module *);
     void setModuleLocation_3D_random(Module *); // 3D version
     void setModuleLocation_3D_random(Module * , float z); // 3D version
+    void call_shmetis_and_set_z();
+    void generate_hgr_file(const std::string& filename);
+
+
     void moveModule_2D(Module *, VECTOR_2D);
     void moveModule_2D(Module *, VECTOR_2D_INT);
     
@@ -176,9 +180,13 @@ public:
     // 3D versions
     double calcHPWL_3D(); // True 3D HPWL calculation
     double calcWA_Wirelength_3D(VECTOR_3D);
+    double calcWA_BIHPWL_3D(VECTOR_3D);
+    double calcWA_Wirelength_Z(VECTOR_3D);
     double calcLSE_Wirelength_3D(VECTOR_3D);
-    double calcNetBoundPins_3D();
+    double calcNetBoundPins_3D(float defaultModuleDepth);
     double calcModuleHPWLfast(Module *);
+    double calcBIHPWL();
+    int calcCutSize();
 
     void moveNodesCenterToCenter(); // used for initial 2D quadratic placement
 

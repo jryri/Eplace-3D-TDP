@@ -128,6 +128,7 @@ int main(int argc, char *argv[])
     FirstOrderOptimizer<VECTOR_3D> *opt = nullptr;
     EPlacer_2D *eplacer = nullptr;
     EPlacer_3D *eplacer3d = nullptr;
+    // EPlacer_2D_all_tier *eplacer2d_all_tier = nullptr;
     
     // Check if 3DIC mode is enabled
     if (gArg.CheckExist("3DIC"))
@@ -167,11 +168,17 @@ int main(int argc, char *argv[])
         time_end(&mGPTime);
 
         cout << "mGP finished!\n";
+        // Additional 3D processing if needed
+        if (gArg.CheckExist("3DIC")) {
+            cout << "3D mGP completed!\n";
+        }
+       
         if (gArg.CheckExist("3DIC")) {
             cout << "Final HPWL (3D): " << int(placedb->calcHPWL_3D()) << endl;
         } else {
             cout << "Final HPWL: " << int(placedb->calcHPWL()) << endl;
         }
+
         cout << "mGP time: " << mGPTime << endl;
         if (gArg.CheckExist("3DIC")) {
             PLOTTING::plotCurrentPlacement_3D("mGP result", placedb);
@@ -184,76 +191,76 @@ int main(int argc, char *argv[])
     // legalization and detailed placement
     ///////////////////////////////////////////////////
 
-    if (placedb->dbMacroCount > 0 && !gArg.CheckExist("nomLG"))
-    {
-        SAMacroLegalizer *macroLegalizer = new SAMacroLegalizer(placedb);
-        macroLegalizer->setTargetDensity(targetDensity);
-        cout << "Start mLG, total macro count: " << placedb->dbMacroCount << endl;
-        time_start(&mLGTime);
-        macroLegalizer->legalization();
-        time_end(&mLGTime);
+    // if (placedb->dbMacroCount > 0 && !gArg.CheckExist("nomLG"))
+    // {
+    //     SAMacroLegalizer *macroLegalizer = new SAMacroLegalizer(placedb);
+    //     macroLegalizer->setTargetDensity(targetDensity);
+    //     cout << "Start mLG, total macro count: " << placedb->dbMacroCount << endl;
+    //     time_start(&mLGTime);
+    //     macroLegalizer->legalization();
+    //     time_end(&mLGTime);
 
-        if (gArg.CheckExist("3DIC")) {
-            PLOTTING::plotCurrentPlacement_3D("mLG result", placedb);
-        } else {
-            PLOTTING::plotCurrentPlacement("mLG result", placedb);
-        }
-        if (gArg.CheckExist("3DIC")) {
-            cout << "mLG finished. HPWL after mLG (3D): " << int(placedb->calcHPWL_3D()) << endl;
-        } else {
-            cout << "mLG finished. HPWL after mLG: " << int(placedb->calcHPWL()) << endl;
-        }
-        cout << "mLG time: " << mLGTime << endl;
-        // exit(0);
+    //     if (gArg.CheckExist("3DIC")) {
+    //         PLOTTING::plotCurrentPlacement_3D("mLG result", placedb);
+    //     } else {
+    //         PLOTTING::plotCurrentPlacement("mLG result", placedb);
+    //     }
+    //     if (gArg.CheckExist("3DIC")) {
+    //         cout << "mLG finished. HPWL after mLG (3D): " << int(placedb->calcHPWL_3D()) << endl;
+    //     } else {
+    //         cout << "mLG finished. HPWL after mLG: " << int(placedb->calcHPWL()) << endl;
+    //     }
+    //     cout << "mLG time: " << mLGTime << endl;
+    //     // exit(0);
 
-        if (!gArg.CheckExist("nocGP"))
-        {
-            // Call switch2FillerOnly on appropriate placer
-            if (gArg.CheckExist("3DIC") && eplacer3d) {
-                eplacer3d->switch2FillerOnly();
-            } else if (eplacer) {
-                eplacer->switch2FillerOnly();
-            }
-            cout << "filler placement started!\n";
+    //     if (!gArg.CheckExist("nocGP"))
+    //     {
+    //         // Call switch2FillerOnly on appropriate placer
+    //         if (gArg.CheckExist("3DIC") && eplacer3d) {
+    //             eplacer3d->switch2FillerOnly();
+    //         } else if (eplacer) {
+    //             eplacer->switch2FillerOnly();
+    //         }
+    //         cout << "filler placement started!\n";
 
-            time_start(&FILLERONLYtime);
-            opt->opt();
-            time_end(&FILLERONLYtime);
+    //         time_start(&FILLERONLYtime);
+    //         opt->opt();
+    //         time_end(&FILLERONLYtime);
 
-            cout << "filler placement finished!\n";
-            cout << "FILLERONLY time: " << mGPTime << endl;
-            if (gArg.CheckExist("3DIC")) {
-                PLOTTING::plotCurrentPlacement_3D("FILLERONLY result", placedb);
-            } else {
-                PLOTTING::plotCurrentPlacement("FILLERONLY result", placedb);
-            }
+    //         cout << "filler placement finished!\n";
+    //         cout << "FILLERONLY time: " << mGPTime << endl;
+    //         if (gArg.CheckExist("3DIC")) {
+    //             PLOTTING::plotCurrentPlacement_3D("FILLERONLY result", placedb);
+    //         } else {
+    //             PLOTTING::plotCurrentPlacement("FILLERONLY result", placedb);
+    //         }
 
-            // Call switch2cGP on appropriate placer
-            if (gArg.CheckExist("3DIC") && eplacer3d) {
-                eplacer3d->switch2cGP();
-            } else if (eplacer) {
-                eplacer->switch2cGP();
-            }
-            cout << "cGP started!\n";
+    //         // Call switch2cGP on appropriate placer
+    //         if (gArg.CheckExist("3DIC") && eplacer3d) {
+    //             eplacer3d->switch2cGP();
+    //         } else if (eplacer) {
+    //             eplacer->switch2cGP();
+    //         }
+    //         cout << "cGP started!\n";
 
-            time_start(&cGPTime);
-            opt->opt();
-            time_end(&cGPTime);
+    //         time_start(&cGPTime);
+    //         opt->opt();
+    //         time_end(&cGPTime);
 
-            cout << "cGP finished!\n";
-            if (gArg.CheckExist("3DIC")) {
-                cout << "cGP Final HPWL (3D): " << int(placedb->calcHPWL_3D()) << endl;
-            } else {
-                cout << "cGP Final HPWL: " << int(placedb->calcHPWL()) << endl;
-            }
-            cout << "cGP time: " << mGPTime << endl;
-            if (gArg.CheckExist("3DIC")) {
-                PLOTTING::plotCurrentPlacement_3D("cGP result", placedb);
-            } else {
-                PLOTTING::plotCurrentPlacement("cGP result", placedb);
-            }
-        }
-    }
+    //         cout << "cGP finished!\n";
+    //         if (gArg.CheckExist("3DIC")) {
+    //             cout << "cGP Final HPWL (3D): " << int(placedb->calcHPWL_3D()) << endl;
+    //         } else {
+    //             cout << "cGP Final HPWL: " << int(placedb->calcHPWL()) << endl;
+    //         }
+    //         cout << "cGP time: " << mGPTime << endl;
+    //         if (gArg.CheckExist("3DIC")) {
+    //             PLOTTING::plotCurrentPlacement_3D("cGP result", placedb);
+    //         } else {
+    //             PLOTTING::plotCurrentPlacement("cGP result", placedb);
+    //         }
+    //     }
+    // }
 
     placedb->outputBookShelf("eGP",true); // output, files will be used for legalizers such as ntuplace3
 

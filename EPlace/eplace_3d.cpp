@@ -1,4 +1,5 @@
 #include "eplace.h"
+#include <algorithm>
 
 void EPlacer_3D::setTargetDensity(float target)
 {
@@ -176,6 +177,7 @@ void EPlacer_3D::binInitialization()
     float idealBinVolume = averageNodeVolume / targetDensity;
 
     int idealBinCount = INT_CONVERT(coreRegionVolume / idealBinVolume);
+    // int idealBinCount = INT_CONVERT(coreRegionArea / idealBinArea);
 
     // For 3D, we use cubic root to get bin dimensions
     int idealBinDimension = INT_CONVERT(pow(idealBinCount, 1.0/3.0));
@@ -185,9 +187,12 @@ void EPlacer_3D::binInitialization()
     for (int i = 1; i < 8; i++) // up to 128^3 = 2M bins
     {
         int dimSize = 2 << i; // 4, 8, 16, 32, 64, 128
-        if (dimSize * dimSize * dimSize <= idealBinCount &&
-            (2 << (i + 1)) * (2 << (i + 1)) * (2 << (i + 1)) > idealBinCount)
-        {
+        if ( pow(dimSize,3) <= idealBinCount &&
+             pow(2 << (i + 1),3) > idealBinCount){
+        // if (dimSize * dimSize <= idealBinCount &&
+        //     (2 << (i + 1)) * (2 << (i + 1)) > idealBinCount)
+        // {
+
             binDimension.x = binDimension.y = binDimension.z = dimSize;
             isUpdate = true;
             break;
@@ -197,6 +202,7 @@ void EPlacer_3D::binInitialization()
     {
         binDimension.x = binDimension.y = binDimension.z = 64; // Default 3D bin size
     }
+    binDimension.x = binDimension.y = binDimension.z = 32;
 
     cout << BLUE << "3D Bin dimension: " << binDimension << "\ncoreRegion: " 
          << coreRegionWidth << "x" << coreRegionHeight << "x" << coreRegionDepth << RESET << endl;
@@ -383,6 +389,7 @@ void EPlacer_3D::gradientVectorInitialization()
     wirelengthGradient.resize(db->dbNodes.size());
     p2pattractionGradient.resize(db->dbNodes.size());
     displacementGradient.resize(db->dbNodes.size());
+    cutsizeGradient.resize(db->dbNodes.size());
     
     densityGradient.resize(ePlaceNodesAndFillers.size());
     totalGradient.resize(ePlaceNodesAndFillers.size());
@@ -564,8 +571,6 @@ void EPlacer_3D::densityOverflowUpdate()
 {
     segmentFaultCP("densityOverflow3D");
     float globalOverflowVolume = 0;
-    float globalOverflowVolume_top = 0;
-    float globalOverflowVolume_bottom = 0;
     float nodeVolumeScaled = ePlaceStdCellArea + ePlaceMacroArea * targetDensity; // Vm
 
     for (int i = 0; i < binDimension.x; i++)
@@ -583,25 +588,12 @@ void EPlacer_3D::densityOverflowUpdate()
 
                 // Overflow based on paper's formula (4): max(Vb^m - ρt * Vb^WS, 0)
                 float overflowInBin = max(0.0f, movableVolumeInBin - targetDensity * whitespaceInBin);
-
-                // Determine if the bin is in the top or bottom layer based on its Z center
-                if (bins[i][j][k]->center.z < db->coreRegion.ll_z + db->coreRegion.getDepth() * 0.5f)
-                {
-                    globalOverflowVolume_bottom += overflowInBin;
-                }
-                else
-                {
-                    globalOverflowVolume_top += overflowInBin;
-                }
+                globalOverflowVolume += overflowInBin;
             }
         }
     }
 
-    globalOverflowVolume = globalOverflowVolume_top + globalOverflowVolume_bottom;
     globalDensityOverflow = globalOverflowVolume / nodeVolumeScaled; // τ_total = Σ overflow / Vm
-    //separate overflow for bottom and top
-    globalDensityOverflow_top = globalOverflowVolume_top / nodeVolumeScaled;
-    globalDensityOverflow_bottom = globalOverflowVolume_bottom / nodeVolumeScaled;
 }
 
 void EPlacer_3D::wirelengthGradientUpdate() 
@@ -618,7 +610,7 @@ void EPlacer_3D::wirelengthGradientUpdate()
 
     // 3D wirelength係數計算：大幅增加係數以平衡density gradient的巨大量級
     // 由於3D中density gradient量級極大(~10^5)，需要對應增大wirelength係數
-    float base3DCoeff = 125000.0f;  // 增大1000倍至125000以達到量級平衡
+    float base3DCoeff = 0.125f;  //
     baseWirelengthCoef.x = base3DCoeff / binStep.x;  // 直接除以binStep，不使用normalized
     baseWirelengthCoef.y = base3DCoeff / binStep.y; 
     baseWirelengthCoef.z = base3DCoeff / binStep.z;
@@ -650,7 +642,7 @@ void EPlacer_3D::wirelengthGradientUpdate()
     //! Step2: calculate wirelength density for each nodes (not filler nodes)
     ////////////////////////////////////////////////////////////////
     // Update X/Y/Z max and min in all nets first for 3D
-    double HPWL = db->calcNetBoundPins_3D();
+    double BIHPWL = db->calcNetBoundPins_3D(db->defaultModuleDepth);
 
     if (gArg.CheckExist("LSE"))
     {
@@ -664,6 +656,25 @@ void EPlacer_3D::wirelengthGradientUpdate()
             {
                 VECTOR_3D gradient;
                 gradient = curPin->net->getWirelengthGradientLSE_3D(invertedGamma, curPin);
+                wirelengthGradient[index].x += gradient.x;
+                wirelengthGradient[index].y += gradient.y;
+                wirelengthGradient[index].z += gradient.z; // Add Z component
+            }
+            index++;
+        }
+    }
+    else if (gArg.CheckExist("BIHPWL"))
+    {
+        double BIHPWL = db->calcWA_BIHPWL_3D(invertedGamma);
+        int index = 0;
+        for (Module *curNode : db->dbNodes)
+        {
+            assert(curNode->idx == index);
+            wirelengthGradient[index].SetZero(); //! clear before updating
+            for (Pin *curPin : curNode->modulePins)
+            {
+                VECTOR_3D gradient;
+                gradient = curPin->net->getWirelengthGradientBIHPWL_3D(invertedGamma, curPin, db->defaultModuleDepth);
                 wirelengthGradient[index].x += gradient.x;
                 wirelengthGradient[index].y += gradient.y;
                 wirelengthGradient[index].z += gradient.z; // Add Z component
@@ -689,6 +700,52 @@ void EPlacer_3D::wirelengthGradientUpdate()
             }
             index++;
         }
+    }
+}
+
+void EPlacer_3D::cutsizeGradientUpdate()
+{
+    // densityOverflowUpdate(); // WL gradient has been updated, so we don't need to update it again
+    segmentFaultCP("cutsizeGradient3D");
+    VECTOR_3D baseWirelengthCoef;
+
+    // 3D wirelength係數計算：大幅增加係數以平衡density gradient的巨大量級
+    // 由於3D中density gradient量級極大(~10^5)，需要對應增大wirelength係數
+    float base3DCoeff = 0.125f;  //
+    baseWirelengthCoef.x = base3DCoeff / binStep.x;
+    baseWirelengthCoef.y = base3DCoeff / binStep.y;
+    baseWirelengthCoef.z = base3DCoeff / binStep.z;
+
+    if (globalDensityOverflow > 1.0)
+    {
+
+        baseWirelengthCoef.z *= 0.1;
+    }
+    else if (globalDensityOverflow < 0.1)
+    {
+        baseWirelengthCoef.z *= 10.0;
+    }
+    else
+    {
+        float temp;
+        temp = 1.0 / pow(10.0, (globalDensityOverflow - 0.1) * 20 / 9.0 - 1.0); // see eplace paper equation 38
+        baseWirelengthCoef.z *= temp;
+    }
+
+    invertedGamma = baseWirelengthCoef;
+    int index = 0;
+    double Z_WA = db->calcWA_Wirelength_Z(invertedGamma);
+    for (Module *curNode : db->dbNodes){
+        assert(curNode->idx == index);
+        cutsizeGradient[index].SetZero(); //! clear before updating
+        for (Pin *curPin : curNode->modulePins){
+            VECTOR_3D gradient;
+            gradient = curPin->net->getCutsizeGradient_3D(invertedGamma, curPin);
+            cutsizeGradient[index].x += gradient.x;
+            cutsizeGradient[index].y += gradient.y;
+            cutsizeGradient[index].z += gradient.z; // Add Z component
+        }
+        index++;
     }
 }
 
@@ -755,7 +812,7 @@ void EPlacer_3D::densityGradientUpdate()
     replace::FFT_3D fft(binDimension.x, binDimension.y, binDimension.z, 
                         binStep.x, binStep.y, binStep.z);
     float invertedBinVolume = 1.0 / (binStep.x * binStep.y * binStep.z);
-    
+    std::cout << "invertedBinVolume: " << invertedBinVolume <<" "<< binStep.x <<" "<< binStep.y <<" "<< binStep.z << std::endl;
     // Update density in all 3D bins
     for (int i = 0; i < binDimension.x; i++)
     {
@@ -900,15 +957,31 @@ void EPlacer_3D::densityGradientUpdate()
         index++;
     }
 }
-
+void EPlacer_3D::balanceFactorUpdate()
+{
+    int layer0 = 0;
+    int layer1 = 0;
+    for (Module *curNode : ePlaceNodesAndFillers)
+    {
+        if (curNode->isFiller) continue;
+        int layer = curNode->getCenter().z > db->defaultModuleDepth ? 1 : 0;
+        if (layer == 0) layer0++;
+        else layer1++;
+    }
+    if (layer1 == 0) layer1 = 1; // Avoid division by zero
+    balanceFactor = float_div(layer0, layer1);
+    cout << "balanceFactor: " << balanceFactor << " layer0: " << layer0 << " layer1: " << layer1 << endl;
+}
 void EPlacer_3D::totalGradientUpdate()
 {
     binNodeDensityUpdate();
     densityGradientUpdate();
     wirelengthGradientUpdate();
+    cutsizeGradientUpdate();
     p2pattractionGradientUpdate(); // p2p attraction gradient is only used in mGP
+    balanceFactorUpdate();
 
-    double gWL = 0, gDEN = 0, gT = 0, gDIS = 0;
+    double gWL = 0, gDEN = 0, gT = 0, gDIS = 0, gCUTSIZE = 0;
 
     segmentFaultCP("totalGradient3D");
     int index = 0;
@@ -930,12 +1003,10 @@ void EPlacer_3D::totalGradientUpdate()
         gWL  += preconditioner * sqrt(wirelengthGradient[index].x * wirelengthGradient[index].x + 
                                      wirelengthGradient[index].y * wirelengthGradient[index].y +
                                      wirelengthGradient[index].z * wirelengthGradient[index].z);
-        gDEN += preconditioner * sqrt(densityGradient[index].x * densityGradient[index].x + 
+        gDEN += lambda * preconditioner * sqrt(densityGradient[index].x * densityGradient[index].x + 
                                      densityGradient[index].y * densityGradient[index].y +
                                      densityGradient[index].z * densityGradient[index].z);
-        gT   += preconditioner * sqrt(p2pattractionGradient[index].x * p2pattractionGradient[index].x + 
-                                     p2pattractionGradient[index].y * p2pattractionGradient[index].y +
-                                     p2pattractionGradient[index].z * p2pattractionGradient[index].z);
+        gCUTSIZE +=  1/db->defaultModuleDepth  * cutsizeGradient[index].z;
 
         if (curNodeOrFiller->isFiller)
         {
@@ -952,6 +1023,31 @@ void EPlacer_3D::totalGradientUpdate()
         }
         else
         {
+            float z_factor = 1;
+            // balanceFactor = 1;
+            // if (balanceFactor > 1 ) {//balanceFactor > 1 means layer0 > layer1
+            //     // positive z gradient should be more important
+            //     if (cutsizeGradient[index].z > 0) z_factor = 1/db->defaultModuleDepth * pow(balanceFactor, 20);
+            //     else z_factor = 1/db->defaultModuleDepth / pow(balanceFactor, 20);
+            // }
+            // else {//balanceFactor < 1 means layer0 < layer1
+            //     // negative z gradient should be more important
+            //     if (cutsizeGradient[index].z > 0) z_factor = 1/db->defaultModuleDepth / pow(balanceFactor, 20);
+            //     else z_factor = 1/db->defaultModuleDepth * pow(balanceFactor, 20);
+            // }
+            if (balanceFactor > 1 ) {//balanceFactor > 1 means layer0 > layer1
+                // positive z gradient should be more important
+                if (cutsizeGradient[index].z > 0) z_factor = 1/ balanceFactor;
+                else z_factor = 1/ balanceFactor;  
+            }
+            else {//balanceFactor < 1 means layer0 < layer1
+                // negative z gradient should be more important
+                if (cutsizeGradient[index].z > 0) z_factor = 1/ balanceFactor;
+                else z_factor = 1/ balanceFactor;
+            }
+            // z_factor /= 2;
+            // cout << "z_factor: " << z_factor << " balanceFactor: " << balanceFactor << endl;
+
             // Combine all gradient components for 3D
             totalGradient[index].x = preconditioner * (lambda * densityGradient[index].x - 
                                                       wirelengthGradient[index].x - 
@@ -960,8 +1056,9 @@ void EPlacer_3D::totalGradientUpdate()
                                                       wirelengthGradient[index].y - 
                                                       beta * p2pattractionGradient[index].y );
             totalGradient[index].z = preconditioner * (lambda * densityGradient[index].z - 
-                                                      wirelengthGradient[index].z - 
-                                                      beta * p2pattractionGradient[index].z);
+                                                      wirelengthGradient[index].z ) - 
+                                                      beta * p2pattractionGradient[index].z -
+                                                      z_factor * cutsizeGradient[index].z;
             
 
             if (!curNodeOrFiller->isMacro)
@@ -973,8 +1070,8 @@ void EPlacer_3D::totalGradientUpdate()
 
         index++;
     }
-    printf("3D avg|G|  WL %.2e  DEN %.2e  TIM %.2e\n",
-        gWL, gDEN, gT);
+    printf("3D avg|G|  WL %.2e  DEN %.2e  TIM %.2e  CUTSIZE %.2e\n",
+        gWL, gDEN, gT, gCUTSIZE);
 }
 
 vector<VECTOR_3D> EPlacer_3D::getGradient()
@@ -1042,7 +1139,14 @@ void EPlacer_3D::setPosition(vector<VECTOR_3D> modulePositions)
 
 void EPlacer_3D::penaltyFactorInitilization()
 {
-    lastHPWL = db->calcHPWL_3D(); // Use 3D HPWL calculation
+    if (gArg.CheckExist("BIHPWL"))
+    {
+        lastHPWL = db->calcBIHPWL(); // Use 3D HPWL calculation
+    }
+    else
+    {
+        lastHPWL = db->calcHPWL_3D(); // Use 3D HPWL calculation
+    }
     
     float denominator = 0;
     float numerator = 0;
@@ -1055,12 +1159,7 @@ void EPlacer_3D::penaltyFactorInitilization()
         numerator += fabs(wirelengthGradient[i].x);
         numerator += fabs(wirelengthGradient[i].y);
         numerator += fabs(wirelengthGradient[i].z); // Add Z component
-        // numerator += fabs(beta * p2pattractionGradient[i].x);
-        // numerator += fabs(beta * p2pattractionGradient[i].y);
-        // numerator += fabs(beta * p2pattractionGradient[i].z); // Add Z component
-        // denominator += fabs(densityGradient[i].x);
-        // denominator += fabs(densityGradient[i].y);
-        // denominator += fabs(densityGradient[i].z); // Add Z component
+
     }
     for (int i = nodeCount; i < nodeAndFillerCount; i++)
     {
@@ -1070,12 +1169,21 @@ void EPlacer_3D::penaltyFactorInitilization()
     }
 
     lambda = float_div(numerator, denominator);
+    // lambda = 1.0;
     cout << "Initial 3D penalty factor: " << lambda << endl;
 }
 
 void EPlacer_3D::updatePenaltyFactor()
 {
-    float curHPWL = db->calcHPWL_3D(); // Use 3D HPWL calculation
+    float curHPWL;
+    if (gArg.CheckExist("BIHPWL"))
+    {
+        curHPWL = db->calcBIHPWL(); // Use 3D HPWL calculation
+    }
+    else
+    {
+        curHPWL = db->calcHPWL_3D(); // Use 3D HPWL calculation
+    }
     float multiplier;
     double deltaHPWL = curHPWL - lastHPWL;
     if ((deltaHPWL) < 0.0)
@@ -1097,7 +1205,12 @@ void EPlacer_3D::updatePenaltyFactor()
     }
     lambda *= multiplier;
     lastHPWL = curHPWL;
+
+    // 限制 lambda 在合理範圍內（替代 std::clamp）
+    // lambda = max(0.000001f, min(lambda, 1.0f));
 }
+
+
 
 void EPlacer_3D::updatePenaltyFactorbyTNS(int iter_power)
 {
@@ -1123,6 +1236,9 @@ void EPlacer_3D::updatePenaltyFactorbyTNS(int iter_power)
     }
     lambda *= multiplier;
     lastTNS = curTNS;
+    
+    // 限制 lambda 在合理範圍內（替代 std::clamp）
+    // lambda = max(0.000001f, min(lambda, 1.0f));
 }
 
 void EPlacer_3D::switch2FillerOnly()
@@ -1140,13 +1256,19 @@ void EPlacer_3D::switch2cGP()
     placementStage = cGP;
 }
 
+
+
 void EPlacer_3D::showInfo()
 {
     cout << "3D Overflow: " << globalDensityOverflow << endl;
     cout << "3D penalty factor: " << fixed << lambda << endl;
     cout << "HPWL (3D): " << lastHPWL << endl;
+    cout << "BIHPWL (3D): " << db->calcBIHPWL() << endl;
+    cout << "CUTSIZE: " << db->calcCutSize() << endl;
+    cout << "balanceFactor: " << balanceFactor << endl;
     cout << "curTNS: " << curTNS << endl;
-    cout << "lastTNS: " << lastTNS << endl << endl;
+    cout << "lastTNS: " << lastTNS << endl;
+    cout << endl;
 }
 
 void EPlacer_3D::showInfoFinal()
@@ -1168,6 +1290,10 @@ vector<VECTOR_3D> EPlacer_3D::getModulePositions(vector<Module *> modules)
     return res;
 } 
 
+
+
+
+
 void EPlacer_3D::shrink2DTo3DTestData()
 {
     cout << "=== Shrinking 2D test data to 3D ===" << endl;
@@ -1183,7 +1309,7 @@ void EPlacer_3D::shrink2DTo3DTestData()
     float newWidth = originalWidth * shrinkFactor;
     float newHeight = originalHeight * shrinkFactor;
     // float layerThickness = 10.0f;  // 簡化的層厚度
-    float layerThickness = min(originalWidth, originalHeight) / 2;  // 簡化的層厚度
+    float layerThickness = shrinkFactor * min(originalWidth, originalHeight) / 2;  // 簡化的層厚度
     
     cout << "Shrink factor: " << shrinkFactor << ", Layer thickness: " << layerThickness << endl;
     
@@ -1294,75 +1420,14 @@ void EPlacer_3D::placeModulesAtCenter()
     // 計算core region的中心區域
     float centerX = (db->coreRegion.ll.x + db->coreRegion.ur.x) * 0.5f;
     float centerY = (db->coreRegion.ll.y + db->coreRegion.ur.y) * 0.5f;
-    float centerZ = (db->coreRegion.ll_z + db->coreRegion.ur_z) * 0.5f;
-    
-    // 計算放置區域大小（中心區域的50%）
-    float placeWidth = db->coreRegion.getWidth() * 0.5f;
-    float placeHeight = db->coreRegion.getHeight() * 0.5f;
-    float placeDepth = db->coreRegion.getDepth() * 0.5f;
-    
-    cout << "Center placement area: " << placeWidth << " x " << placeHeight << " x " << placeDepth << endl;
-    
-    // 使用2層分配策略確保平分
-    int nodeCount = db->dbNodes.size();
-    int gridX = (int)ceil(sqrt(nodeCount / 2.0));  // 每層的X網格數
-    int gridY = gridX;                              // 每層的Y網格數
-    int gridZ = 2;                                  // 固定2層
-    
-    float stepX = placeWidth / max(1, gridX);
-    float stepY = placeHeight / max(1, gridY);
-    float stepZ = placeDepth / max(1, gridZ-1);     // 兩層之間的距離
-    
-    cout << "Grid layout (2-layer): " << gridX << " x " << gridY << " x " << gridZ << endl;
-    cout << "Grid steps: " << stepX << " x " << stepY << " x " << stepZ << endl;
-    
-    // 放置所有nodes，確保平分到兩層
-    for (int i = 0; i < nodeCount; i++) {
-        Module* node = db->dbNodes[i];
-        
-        // 交替分配到兩層
-        int layerIndex = i % 2;  // 0 = 底層, 1 = 頂層
-        
-        // 在每層內的XY位置
-        int moduleIndexInLayer = i / 2;
-        int gx = moduleIndexInLayer % gridX;
-        int gy = moduleIndexInLayer / gridX;
-        
-        // 計算實際位置（加上隨機偏移避免重疊）
-        float x = centerX - placeWidth * 0.5f + gx * stepX + stepX * 0.5f;
-        float y = centerY - placeHeight * 0.5f + gy * stepY + stepY * 0.5f;
-        // 使用明確的層位置，確保正確的層分離
-        float layerThickness = db->defaultModuleDepth;
-        float z = (layerIndex == 0) ? 0.0f : layerThickness;
-        
-        // // 添加小幅隨機偏移避免完全對齊
-        // x += (rand() % 100 - 50) * 0.01f * stepX;
-        // y += (rand() % 100 - 50) * 0.01f * stepY;
-        // // Z 軸只能向上偏移，避免負數
-        // z += abs(rand() % 50) * 0.01f * stepZ;
-        
-        // // 確保在邊界內 (Z軸必須 >= 0 以滿足 binStartIdx.z >= 0 的限制)
-        // x = max(db->coreRegion.ll.x, min(db->coreRegion.ur.x - node->getWidth(), x));
-        // y = max(db->coreRegion.ll.y, min(db->coreRegion.ur.y - node->getHeight(), y));
-        
-        // // Z座標邊界檢查：LL.z應該在[0, Zmax/2]範圍內連續變化
-        // float zMax = db->coreRegion.ur_z;  // = 2 * layerThickness  
-        // float zMaxHalf = zMax * 0.5f;      // = layerThickness
-        
-        // // 確保LL.z在[0, Zmax/2]範圍內，這樣UR.z = LL.z + depth不會超過Zmax
-        // z = max(db->coreRegion.ll_z, min(zMaxHalf, z));  // LL.z ∈ [0, Zmax/2]
-        
-        // // 設定位置
-        // // db->setModuleLocation_3D(node, x, y, z);
-        db->setModuleLocation_3D(node, centerX, centerY, layerThickness/2);
 
-        // db->setModuleLocation_3D_random(node,layerThickness/2 );
-        
-        if (i < 10) { // 只打印前10個模組避免輸出太多
-            cout << "Node " << i << " (" << node->name << "): [" << x << ", " << y << ", " << z << "]" << endl;
-        }
+    // 先將所有 module 放在 XY 平面的中心
+    for (Module* node : db->dbNodes) {
+        db->setModuleLocation_3D(node, centerX, centerY, 0);
     }
     
+    db->call_shmetis_and_set_z();
+
     cout << "=== Center placement completed ===" << endl;
 }
 
