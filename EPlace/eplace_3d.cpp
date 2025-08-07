@@ -1006,7 +1006,7 @@ void EPlacer_3D::totalGradientUpdate()
         gDEN += lambda * preconditioner * sqrt(densityGradient[index].x * densityGradient[index].x + 
                                      densityGradient[index].y * densityGradient[index].y +
                                      densityGradient[index].z * densityGradient[index].z);
-        gCUTSIZE +=  1/db->defaultModuleDepth  * cutsizeGradient[index].z;
+        // gCUTSIZE +=  preconditioner * z_factor * cutsizeGradient[index].z;
 
         if (curNodeOrFiller->isFiller)
         {
@@ -1024,28 +1024,20 @@ void EPlacer_3D::totalGradientUpdate()
         else
         {
             float z_factor = 1;
-            // balanceFactor = 1;
-            // if (balanceFactor > 1 ) {//balanceFactor > 1 means layer0 > layer1
-            //     // positive z gradient should be more important
-            //     if (cutsizeGradient[index].z > 0) z_factor = 1/db->defaultModuleDepth * pow(balanceFactor, 20);
-            //     else z_factor = 1/db->defaultModuleDepth / pow(balanceFactor, 20);
-            // }
-            // else {//balanceFactor < 1 means layer0 < layer1
-            //     // negative z gradient should be more important
-            //     if (cutsizeGradient[index].z > 0) z_factor = 1/db->defaultModuleDepth / pow(balanceFactor, 20);
-            //     else z_factor = 1/db->defaultModuleDepth * pow(balanceFactor, 20);
-            // }
+
             if (balanceFactor > 1 ) {//balanceFactor > 1 means layer0 > layer1
                 // positive z gradient should be more important
-                if (cutsizeGradient[index].z > 0) z_factor = 1/ balanceFactor;
-                else z_factor = 1/ balanceFactor;  
+                if (cutsizeGradient[index].z > 0) z_factor = 1 * balanceFactor;
+                else z_factor = 1 / balanceFactor;  
             }
             else {//balanceFactor < 1 means layer0 < layer1
                 // negative z gradient should be more important
-                if (cutsizeGradient[index].z > 0) z_factor = 1/ balanceFactor;
-                else z_factor = 1/ balanceFactor;
+                if (cutsizeGradient[index].z > 0) z_factor = 1 / balanceFactor;
+                else z_factor = 1 * balanceFactor;
             }
-            // z_factor /= 2;
+            // z_factor = pow(z_factor, 2);
+         
+            
             // cout << "z_factor: " << z_factor << " balanceFactor: " << balanceFactor << endl;
 
             // Combine all gradient components for 3D
@@ -1056,9 +1048,9 @@ void EPlacer_3D::totalGradientUpdate()
                                                       wirelengthGradient[index].y - 
                                                       beta * p2pattractionGradient[index].y );
             totalGradient[index].z = preconditioner * (lambda * densityGradient[index].z - 
-                                                      wirelengthGradient[index].z ) - 
+                                                      wirelengthGradient[index].z - 
                                                       beta * p2pattractionGradient[index].z -
-                                                      z_factor * cutsizeGradient[index].z;
+                                                      z_factor * cutsizeGradient[index].z);
             
 
             if (!curNodeOrFiller->isMacro)

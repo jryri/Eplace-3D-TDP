@@ -1,0 +1,44 @@
+/*
+ * 3D Hybrid-Bonding Terminal (HBT)  –  ASAP7 demo cell
+ * Diameter  : 0.5 μm  (area ≈ 0.196 μm²)
+ * Pitch     : 1.0 μm
+ * C_load    : 0.20 fF  (NCSU‐EDA guideline)
+ * Delay     : modeled as 0 ps (lumped into interconnect)
+ */
+
+library (ASAP7_3D_VIA) {
+
+    /* ––––– Cell definition ––––– */
+    cell (HBT) {
+        area                : 0.25;          /* 0.5 µm 直徑 -> πr² ≈ 0.196 µm² */
+        cell_leakage_power  : 0.0;            /* 純被動元件 */
+
+        /* -------- Pin on bottom die -------- */
+        pin (B) {
+            direction           : input;
+            capacitance         : 0.10;       /* 半邊負載 */
+            related_ground_pin  : "VSS";
+        }
+
+        /* -------- Pin on top die -------- */
+        pin (T) {
+            direction           : output;
+            capacitance         : 0.10;       /* 半邊負載 */
+            related_ground_pin  : "VSS";
+        }
+
+        /* -------- Zero-delay arc -------- */
+        /* 兩種模式：a) 完全 0、b) 小 RC 近似                             */
+        /* 若 STA 僅需負載，保持 0；要微調延遲可把 r = 0.5ps, c =0.2fF 等 */
+
+        /* ------ setup/hold 只需宣告 table[1] = 0 ------ */
+        timing () {
+            related_pin         : "B";
+            timing_sense        : positive_unate;
+            cell_rise (scalar)  { 0.0; }
+            cell_fall (scalar)  { 0.0; }
+            rise_transition (scalar) { 0.0; }
+            fall_transition (scalar) { 0.0; }
+        }
+    } /* end cell */
+} /* end library */

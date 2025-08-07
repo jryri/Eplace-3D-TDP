@@ -13,4 +13,4 @@
 
 rm main3D
 ln ./build/main3D  main3D 
-./main3D -aux ./testcase/aes_cipher_top/aes_cipher_top.aux -3DIC -BIHPWL -targetOverflow 0.1 -fullPlot 
+./main3D -aux ./testcase/aes_cipher_top/aes_cipher_top.aux -3DIC -BIHPWL -targetOverflow 0.1 -fullPlot -bb
