@@ -1,0 +1,31 @@
+OpenROAD v2.0-17598-ga008522d8 
+Features included (+) or not (-): +Charts +GPU +GUI +Python : None
+This program is licensed under the BSD-3 license. See the LICENSE file for details.
+Components of this program may be licensed under more restrictive licenses which must be honored.
+lib: ./ASAP7/LIB/asap7sc7p5t_SIMPLE_LVT_TT_nldm_211120.lib
+[WARNING STA-1212] ./ASAP7/LIB/asap7sc7p5t_SIMPLE_LVT_TT_nldm_211120.lib line 13178, timing group from output port.
+[WARNING STA-1212] ./ASAP7/LIB/asap7sc7p5t_SIMPLE_LVT_TT_nldm_211120.lib line 13211, timing group from output port.
+[WARNING STA-1212] ./ASAP7/LIB/asap7sc7p5t_SIMPLE_LVT_TT_nldm_211120.lib line 13244, timing group from output port.
+[WARNING STA-1212] ./ASAP7/LIB/asap7sc7p5t_SIMPLE_LVT_TT_nldm_211120.lib line 13277, timing group from output port.
+[WARNING STA-1212] ./ASAP7/LIB/asap7sc7p5t_SIMPLE_LVT_TT_nldm_211120.lib line 13310, timing group from output port.
+[WARNING STA-1212] ./ASAP7/LIB/asap7sc7p5t_SIMPLE_LVT_TT_nldm_211120.lib line 13343, timing group from output port.
+[WARNING STA-1212] ./ASAP7/LIB/asap7sc7p5t_SIMPLE_LVT_TT_nldm_211120.lib line 13376, timing group from output port.
+[WARNING STA-1212] ./ASAP7/LIB/asap7sc7p5t_SIMPLE_LVT_TT_nldm_211120.lib line 14772, timing group from output port.
+[WARNING STA-1212] ./ASAP7/LIB/asap7sc7p5t_SIMPLE_LVT_TT_nldm_211120.lib line 14805, timing group from output port.
+[WARNING STA-1212] ./ASAP7/LIB/asap7sc7p5t_SIMPLE_LVT_TT_nldm_211120.lib line 14838, timing group from output port.
+lib: ./ASAP7/LIB/asap7sc7p5t_INVBUF_LVT_TT_nldm_220122.lib
+lib: ./ASAP7/LIB/asap7sc7p5t_SIMPLE_RVT_TT_nldm_211120.lib
+[WARNING STA-1212] ./ASAP7/LIB/asap7sc7p5t_SIMPLE_RVT_TT_nldm_211120.lib line 13178, timing group from output port.
+[WARNING STA-1212] ./ASAP7/LIB/asap7sc7p5t_SIMPLE_RVT_TT_nldm_211120.lib line 13211, timing group from output port.
+[WARNING STA-1212] ./ASAP7/LIB/asap7sc7p5t_SIMPLE_RVT_TT_nldm_211120.lib line 13244, timing group from output port.
+[WARNING STA-1212] ./ASAP7/LIB/asap7sc7p5t_SIMPLE_RVT_TT_nldm_211120.lib line 13277, timing group from output port.
+[WARNING STA-1212] ./ASAP7/LIB/asap7sc7p5t_SIMPLE_RVT_TT_nldm_211120.lib line 13310, timing group from output port.
+[WARNING STA-1212] ./ASAP7/LIB/asap7sc7p5t_SIMPLE_RVT_TT_nldm_211120.lib line 13343, timing group from output port.
+[WARNING STA-1212] ./ASAP7/LIB/asap7sc7p5t_SIMPLE_RVT_TT_nldm_211120.lib line 13376, timing group from output port.
+[WARNING STA-1212] ./ASAP7/LIB/asap7sc7p5t_SIMPLE_RVT_TT_nldm_211120.lib line 14772, timing group from output port.
+[WARNING STA-1212] ./ASAP7/LIB/asap7sc7p5t_SIMPLE_RVT_TT_nldm_211120.lib line 14805, timing group from output port.
+[WARNING STA-1212] ./ASAP7/LIB/asap7sc7p5t_SIMPLE_RVT_TT_nldm_211120.lib line 14838, timing group from output port.
+lib: ./ASAP7/LIB/asap7sc7p5t_SEQ_LVT_TT_nldm_220123.lib
+lib: ./ASAP7/LIB/asap7sc7p5t_INVBUF_SRAM_TT_nldm_220122.lib
+lib: ./ASAP7/LIB/asap7sc7p5t_SEQ_SLVT_TT_nldm_220123.lib
+lib: ./ASAP7/LIB/asap7sc7p5t_AO_RVT_TT_nldm_211120.lib

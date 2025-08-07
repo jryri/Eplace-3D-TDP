@@ -350,6 +350,10 @@ public:
 
     void totalGradientUpdate(); // 3D version
 
+    void calcNetBoundPins_3D(){ db->calcNetBoundPins_3D(db->defaultModuleDepth);}
+    void addHBT(){ db->addHBT(); }
+    void removeHBTs(){ db->removeHBTs(); }
+
     vector<VECTOR_3D> getGradient();
     vector<VECTOR_3D> getPosition();
 

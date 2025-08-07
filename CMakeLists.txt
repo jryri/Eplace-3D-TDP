@@ -27,6 +27,7 @@ ADD_EXECUTABLE(
     ${PROJECT_SOURCE_DIR}/FFT/fftsg.cpp
     ${PROJECT_SOURCE_DIR}/DetailedPlacement/detailed.cpp
     ${PROJECT_SOURCE_DIR}/OpenroadInterface/interface.cpp
+    ${PROJECT_SOURCE_DIR}/OpenroadInterface/interface3D.cpp   
     ${PROJECT_SOURCE_DIR}/Legalization/legalizer.cpp
 )
 

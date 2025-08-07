@@ -17,6 +17,8 @@ file(REMOVE_RECURSE
   "CMakeFiles/main3D.dir/Legalization/legalizer.o.d"
   "CMakeFiles/main3D.dir/OpenroadInterface/interface.o"
   "CMakeFiles/main3D.dir/OpenroadInterface/interface.o.d"
+  "CMakeFiles/main3D.dir/OpenroadInterface/interface3D.o"
+  "CMakeFiles/main3D.dir/OpenroadInterface/interface3D.o.d"
   "CMakeFiles/main3D.dir/Parser/parser.o"
   "CMakeFiles/main3D.dir/Parser/parser.o.d"
   "CMakeFiles/main3D.dir/PlaceCommon/arghandler.o"

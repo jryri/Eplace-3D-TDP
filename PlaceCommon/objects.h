@@ -27,7 +27,15 @@ public:
         init();
         idx = index;
     }
+    Net(int index, string _name)
+    {
+        init();
+        idx = index;
+        name = _name;
+        cout << "Net name: " << name << endl;
+    }
     int idx;
+    string name;
     bool isPartitioned;
     vector<Pin *> netPins;
     //! boundPin pointers, used for quadratic placement utilizing bound2bound net model
@@ -68,6 +76,7 @@ public:
 
     void init()
     {
+        name = "";
         idx = 0;
         isPartitioned = false;
         isBIHPWL_Component = false;

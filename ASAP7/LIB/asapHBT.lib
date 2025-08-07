@@ -1,44 +1,274 @@
 /*
- * 3D Hybrid-Bonding Terminal (HBT)  –  ASAP7 demo cell
- * Diameter  : 0.5 μm  (area ≈ 0.196 μm²)
- * Pitch     : 1.0 μm
- * C_load    : 0.20 fF  (NCSU‐EDA guideline)
- * Delay     : modeled as 0 ps (lumped into interconnect)
- */
+BSD 3-Clause License
 
-library (ASAP7_3D_VIA) {
+Copyright 2020 Lawrence T. Clark, Vinay Vashishtha, or Arizona State
+University
 
-    /* ––––– Cell definition ––––– */
-    cell (HBT) {
-        area                : 0.25;          /* 0.5 µm 直徑 -> πr² ≈ 0.196 µm² */
-        cell_leakage_power  : 0.0;            /* 純被動元件 */
+Redistribution and use in source and binary forms, with or without
+modification, are permitted provided that the following conditions are met:
 
-        /* -------- Pin on bottom die -------- */
-        pin (B) {
-            direction           : input;
-            capacitance         : 0.10;       /* 半邊負載 */
-            related_ground_pin  : "VSS";
+1. Redistributions of source code must retain the above copyright notice,
+this list of conditions and the following disclaimer.
+
+2. Redistributions in binary form must reproduce the above copyright
+notice, this list of conditions and the following disclaimer in the
+documentation and/or other materials provided with the distribution.
+
+3. Neither the name of the copyright holder nor the names of its
+contributors may be used to endorse or promote products derived from this
+software without specific prior written permission.
+
+THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE
+LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
+SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+POSSIBILITY OF SUCH DAMAGE.
+*/
+
+library (asapHBT) {
+  /* Models written by Liberate 18.1.0.293 from Cadence Design Systems, Inc. on Mon Dec  7 13:47:13 MST 2020 */
+  comment : "";
+  date : "$Date: Mon Dec  7 13:44:02 2020 $";
+  revision : "1.0";
+  delay_model : table_lookup;
+  capacitive_load_unit (1,ff);
+  current_unit : "1mA";
+  leakage_power_unit : "1pW";
+  pulling_resistance_unit : "1kohm";
+  time_unit : "1ps";
+  voltage_unit : "1V";
+  voltage_map (VDD, 0.7);
+  voltage_map (VSS, 0);
+  voltage_map (GND, 0);
+  default_cell_leakage_power : 0;
+  default_fanout_load : 1;
+  default_max_transition : 320;
+  default_output_pin_cap : 0;
+  in_place_swap_mode : match_footprint;
+  input_threshold_pct_fall : 50;
+  input_threshold_pct_rise : 50;
+  nom_process : 1;
+  nom_temperature : 25;
+  nom_voltage : 0.7;
+  output_threshold_pct_fall : 50;
+  output_threshold_pct_rise : 50;
+  slew_derate_from_library : 1;
+  slew_lower_threshold_pct_fall : 10;
+  slew_lower_threshold_pct_rise : 10;
+  slew_upper_threshold_pct_fall : 90;
+  slew_upper_threshold_pct_rise : 90;
+  operating_conditions (PVT_0P7V_25C) {
+    process : 1;
+    temperature : 25;
+    voltage : 0.7;
+  }
+  default_operating_conditions : PVT_0P7V_25C;
+  lu_table_template (constraint_template_7x7) {
+    variable_1 : constrained_pin_transition;
+    variable_2 : related_pin_transition;
+    index_1 ("5, 10, 20, 40, 80, 160, 320");
+    index_2 ("5, 10, 20, 40, 80, 160, 320");
+  }
+  lu_table_template (delay_template_7x7_x1) {
+    variable_1 : input_net_transition;
+    variable_2 : total_output_net_capacitance;
+    index_1 ("5, 10, 20, 40, 80, 160, 320");
+    index_2 ("0.72, 1.44, 2.88, 5.76, 11.52, 23.04, 46.08");
+  }
+  lu_table_template (mpw_constraint_template_7x7) {
+    variable_1 : constrained_pin_transition;
+    index_1 ("5, 10, 20, 40, 80, 160, 320");
+  }
+  power_lut_template (passive_power_template_7x1_x1) {
+    variable_1 : input_transition_time;
+    index_1 ("5, 10, 20, 40, 80, 160, 320");
+  }
+  power_lut_template (power_template_7x7_x1) {
+    variable_1 : input_transition_time;
+    variable_2 : total_output_net_capacitance;
+    index_1 ("5, 10, 20, 40, 80, 160, 320");
+    index_2 ("0.72, 1.44, 2.88, 5.76, 11.52, 23.04, 46.08");
+  }
+  lu_table_template (waveform_template_name) {
+    variable_1 : input_net_transition;
+    variable_2 : normalized_voltage;
+    index_1 ("0, 1000, 2000, 3000, 4000, 5000, 6000");
+    index_2 ("0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16");
+  }
+  input_voltage (default_VDD_VSS_input) {
+    vil : 0;
+    vih : 0.7;
+    vimin : 0;
+    vimax : 0.7;
+  }
+  output_voltage (default_VDD_VSS_output) {
+    vol : 0;
+    voh : 0.7;
+    vomin : 0;
+    vomax : 0.7;
+  }
+  normalized_driver_waveform (waveform_template_name) {
+    driver_waveform_name : "PreDriver20.5:rise";
+    index_1 ("5, 10, 20, 40, 80, 160, 320");
+    index_2 ("0, 0.03, 0.1, 0.158744, 0.221271, 0.279374, 0.333513, 0.3841, 0.437223, 0.533203, 0.58153, 0.626864, 0.717883, 0.806555, 0.9, 0.958983, 1");
+    values ( \
+      "0, 0.375, 0.625, 0.84375, 1.09375, 1.34375, 1.59375, 1.84375, 2.125, 2.6875, 3, 3.3125, 4, 4.75, 5.625, 6.21875, 6.65625", \
+      "0, 0.75, 1.25, 1.6875, 2.1875, 2.6875, 3.1875, 3.6875, 4.25, 5.375, 6, 6.625, 8, 9.5, 11.25, 12.4375, 13.3125", \
+      "0, 1.5, 2.5, 3.375, 4.375, 5.375, 6.375, 7.375, 8.5, 10.75, 12, 13.25, 16, 19, 22.5, 24.875, 26.625", \
+      "0, 3, 5, 6.75, 8.75, 10.75, 12.75, 14.75, 17, 21.5, 24, 26.5, 32, 38, 45, 49.75, 53.25", \
+      "0, 6, 10, 13.5, 17.5, 21.5, 25.5, 29.5, 34, 43, 48, 53, 64, 76, 90, 99.5, 106.5", \
+      "0, 12, 20, 27, 35, 43, 51, 59, 68, 86, 96, 106, 128, 152, 180, 199, 213", \
+      "0, 24, 40, 54, 70, 86, 102, 118, 136, 172, 192, 212, 256, 304, 360, 398, 426" \
+    );
+  }
+  normalized_driver_waveform (waveform_template_name) {
+    driver_waveform_name : "PreDriver20.5:fall";
+    index_1 ("5, 10, 20, 40, 80, 160, 320");
+    index_2 ("0, 0.03, 0.1, 0.158744, 0.221271, 0.279374, 0.333513, 0.3841, 0.437223, 0.533203, 0.58153, 0.626864, 0.717883, 0.806555, 0.9, 0.958983, 1");
+    values ( \
+      "0, 0.375, 0.625, 0.84375, 1.09375, 1.34375, 1.59375, 1.84375, 2.125, 2.6875, 3, 3.3125, 4, 4.75, 5.625, 6.21875, 6.65625", \
+      "0, 0.75, 1.25, 1.6875, 2.1875, 2.6875, 3.1875, 3.6875, 4.25, 5.375, 6, 6.625, 8, 9.5, 11.25, 12.4375, 13.3125", \
+      "0, 1.5, 2.5, 3.375, 4.375, 5.375, 6.375, 7.375, 8.5, 10.75, 12, 13.25, 16, 19, 22.5, 24.875, 26.625", \
+      "0, 3, 5, 6.75, 8.75, 10.75, 12.75, 14.75, 17, 21.5, 24, 26.5, 32, 38, 45, 49.75, 53.25", \
+      "0, 6, 10, 13.5, 17.5, 21.5, 25.5, 29.5, 34, 43, 48, 53, 64, 76, 90, 99.5, 106.5", \
+      "0, 12, 20, 27, 35, 43, 51, 59, 68, 86, 96, 106, 128, 152, 180, 199, 213", \
+      "0, 24, 40, 54, 70, 86, 102, 118, 136, 172, 192, 212, 256, 304, 360, 398, 426" \
+    );
+  }
+  normalized_driver_waveform (waveform_template_name) {
+    index_1 ("5, 10, 20, 40, 80, 160, 320");
+    index_2 ("0, 0.03, 0.1, 0.158744, 0.221271, 0.279374, 0.333513, 0.3841, 0.437223, 0.533203, 0.58153, 0.626864, 0.717883, 0.806555, 0.9, 0.958983, 1");
+    values ( \
+      "0, 0.375, 0.625, 0.84375, 1.09375, 1.34375, 1.59375, 1.84375, 2.125, 2.6875, 3, 3.3125, 4, 4.75, 5.625, 6.21875, 6.65625", \
+      "0, 0.75, 1.25, 1.6875, 2.1875, 2.6875, 3.1875, 3.6875, 4.25, 5.375, 6, 6.625, 8, 9.5, 11.25, 12.4375, 13.3125", \
+      "0, 1.5, 2.5, 3.375, 4.375, 5.375, 6.375, 7.375, 8.5, 10.75, 12, 13.25, 16, 19, 22.5, 24.875, 26.625", \
+      "0, 3, 5, 6.75, 8.75, 10.75, 12.75, 14.75, 17, 21.5, 24, 26.5, 32, 38, 45, 49.75, 53.25", \
+      "0, 6, 10, 13.5, 17.5, 21.5, 25.5, 29.5, 34, 43, 48, 53, 64, 76, 90, 99.5, 106.5", \
+      "0, 12, 20, 27, 35, 43, 51, 59, 68, 86, 96, 106, 128, 152, 180, 199, 213", \
+      "0, 24, 40, 54, 70, 86, 102, 118, 136, 172, 192, 212, 256, 304, 360, 398, 426" \
+    );
+  }
+  cell (HBTvia) {
+area : 0.25;
+    pg_pin (VDD) {
+      direction : input;
+      pg_type : primary_power;
+      voltage_name : "VDD";
+    }
+    pg_pin (VSS) {
+      direction : input;
+      pg_type : primary_ground;
+      voltage_name : "VSS";
+    }
+    leakage_power () {
+      value : 6175.97;
+      when : "(A * Y)";
+      related_pg_pin : VDD;
+    }
+    leakage_power () {
+      value : 0;
+      when : "(A * Y)";
+      related_pg_pin : VSS;
+    }
+    leakage_power () {
+      value : 5898.66;
+      when : "(!A * !Y)";
+      related_pg_pin : VDD;
+    }
+    leakage_power () {
+      value : 0;
+      when : "(!A * !Y)";
+      related_pg_pin : VSS;
+    }
+    leakage_power () {
+      value : 6037.31;
+      related_pg_pin : VDD;
+    }
+    leakage_power () {
+      value : 0;
+      related_pg_pin : VSS;
+    }
+    pin (Y) {
+      direction : output;
+      function : "A";
+      power_down_function : "(!VDD) + (VSS)";
+      related_ground_pin : VSS;
+      related_power_pin : VDD;
+      max_capacitance : 368.64;
+      output_voltage : default_VDD_VSS_output;
+      timing () {
+        related_pin : "A";
+        timing_sense : positive_unate;
+        timing_type : combinational;
+        cell_rise (delay_template_7x7_x1) {
+          index_1 ("5, 10, 20, 40, 80, 160, 320");
+          index_2 ("5.76, 11.52, 23.04, 46.08, 92.16, 184.32, 368.64");
+          values (             "0.0001, 0.0001, 0.0001, 0.0001, 0.0001, 0.0001, 0.0001",             "0.0001, 0.0001, 0.0001, 0.0001, 0.0001, 0.0001, 0.0001",             "0.0001, 0.0001, 0.0001, 0.0001, 0.0001, 0.0001, 0.0001",             "0.0001, 0.0001, 0.0001, 0.0001, 0.0001, 0.0001, 0.0001",             "0.0001, 0.0001, 0.0001, 0.0001, 0.0001, 0.0001, 0.0001",             "0.0001, 0.0001, 0.0001, 0.0001, 0.0001, 0.0001, 0.0001",             "0.0001, 0.0001, 0.0001, 0.0001, 0.0001, 0.0001, 0.0001"           );
         }
-
-        /* -------- Pin on top die -------- */
-        pin (T) {
-            direction           : output;
-            capacitance         : 0.10;       /* 半邊負載 */
-            related_ground_pin  : "VSS";
+        rise_transition (delay_template_7x7_x1) {
+          index_1 ("5, 10, 20, 40, 80, 160, 320");
+          index_2 ("5.76, 11.52, 23.04, 46.08, 92.16, 184.32, 368.64");
+          values (             "5, 5, 5, 5, 5, 5, 5",             "10, 10, 10, 10, 10, 10, 10",             "20, 20, 20, 20, 20, 20, 20",             "40, 40, 40, 40, 40, 40, 40",             "80, 80, 80, 80, 80, 80, 80",             "160, 160, 160, 160, 160, 160, 160",             "320, 320, 320, 320, 320, 320, 320"           );
         }
-
-        /* -------- Zero-delay arc -------- */
-        /* 兩種模式：a) 完全 0、b) 小 RC 近似                             */
-        /* 若 STA 僅需負載，保持 0；要微調延遲可把 r = 0.5ps, c =0.2fF 等 */
-
-        /* ------ setup/hold 只需宣告 table[1] = 0 ------ */
-        timing () {
-            related_pin         : "B";
-            timing_sense        : positive_unate;
-            cell_rise (scalar)  { 0.0; }
-            cell_fall (scalar)  { 0.0; }
-            rise_transition (scalar) { 0.0; }
-            fall_transition (scalar) { 0.0; }
+        cell_fall (delay_template_7x7_x1) {
+          index_1 ("5, 10, 20, 40, 80, 160, 320");
+          index_2 ("5.76, 11.52, 23.04, 46.08, 92.16, 184.32, 368.64");
+          values (             "0.0001, 0.0001, 0.0001, 0.0001, 0.0001, 0.0001, 0.0001",             "0.0001, 0.0001, 0.0001, 0.0001, 0.0001, 0.0001, 0.0001",             "0.0001, 0.0001, 0.0001, 0.0001, 0.0001, 0.0001, 0.0001",             "0.0001, 0.0001, 0.0001, 0.0001, 0.0001, 0.0001, 0.0001",             "0.0001, 0.0001, 0.0001, 0.0001, 0.0001, 0.0001, 0.0001",             "0.0001, 0.0001, 0.0001, 0.0001, 0.0001, 0.0001, 0.0001",             "0.0001, 0.0001, 0.0001, 0.0001, 0.0001, 0.0001, 0.0001"           );
         }
-    } /* end cell */
-} /* end library */
+        fall_transition (delay_template_7x7_x1) {
+          index_1 ("5, 10, 20, 40, 80, 160, 320");
+          index_2 ("5.76, 11.52, 23.04, 46.08, 92.16, 184.32, 368.64");
+          values (             "5, 5, 5, 5, 5, 5, 5",             "10, 10, 10, 10, 10, 10, 10",             "20, 20, 20, 20, 20, 20, 20",             "40, 40, 40, 40, 40, 40, 40",             "80, 80, 80, 80, 80, 80, 80",             "160, 160, 160, 160, 160, 160, 160",             "320, 320, 320, 320, 320, 320, 320"           );
+        }
+      }
+      internal_power () {
+        related_pin : "A";
+        related_pg_pin : VDD;
+        rise_power (power_template_7x7_x1) {
+          index_1 ("5, 10, 20, 40, 80, 160, 320");
+          index_2 ("5.76, 11.52, 23.04, 46.08, 92.16, 184.32, 368.64");
+          values (             "1e-06, 1e-06, 1e-06, 1e-06, 1e-06, 1e-06, 1e-06",             "1e-06, 1e-06, 1e-06, 1e-06, 1e-06, 1e-06, 1e-06",             "1e-06, 1e-06, 1e-06, 1e-06, 1e-06, 1e-06, 1e-06",             "1e-06, 1e-06, 1e-06, 1e-06, 1e-06, 1e-06, 1e-06",             "1e-06, 1e-06, 1e-06, 1e-06, 1e-06, 1e-06, 1e-06",             "1e-06, 1e-06, 1e-06, 1e-06, 1e-06, 1e-06, 1e-06",             "1e-06, 1e-06, 1e-06, 1e-06, 1e-06, 1e-06, 1e-06"           );
+        }
+        fall_power (power_template_7x7_x1) {
+          index_1 ("5, 10, 20, 40, 80, 160, 320");
+          index_2 ("5.76, 11.52, 23.04, 46.08, 92.16, 184.32, 368.64");
+          values (             "1e-06, 1e-06, 1e-06, 1e-06, 1e-06, 1e-06, 1e-06",             "1e-06, 1e-06, 1e-06, 1e-06, 1e-06, 1e-06, 1e-06",             "1e-06, 1e-06, 1e-06, 1e-06, 1e-06, 1e-06, 1e-06",             "1e-06, 1e-06, 1e-06, 1e-06, 1e-06, 1e-06, 1e-06",             "1e-06, 1e-06, 1e-06, 1e-06, 1e-06, 1e-06, 1e-06",             "1e-06, 1e-06, 1e-06, 1e-06, 1e-06, 1e-06, 1e-06",             "1e-06, 1e-06, 1e-06, 1e-06, 1e-06, 1e-06, 1e-06"           );
+        }
+      }
+      internal_power () {
+        related_pin : "A";
+        related_pg_pin : VSS;
+        rise_power (power_template_7x7_x1) {
+          index_1 ("5, 10, 20, 40, 80, 160, 320");
+          index_2 ("5.76, 11.52, 23.04, 46.08, 92.16, 184.32, 368.64");
+          values (             "1e-06, 1e-06, 1e-06, 1e-06, 1e-06, 1e-06, 1e-06",             "1e-06, 1e-06, 1e-06, 1e-06, 1e-06, 1e-06, 1e-06",             "1e-06, 1e-06, 1e-06, 1e-06, 1e-06, 1e-06, 1e-06",             "1e-06, 1e-06, 1e-06, 1e-06, 1e-06, 1e-06, 1e-06",             "1e-06, 1e-06, 1e-06, 1e-06, 1e-06, 1e-06, 1e-06",             "1e-06, 1e-06, 1e-06, 1e-06, 1e-06, 1e-06, 1e-06",             "1e-06, 1e-06, 1e-06, 1e-06, 1e-06, 1e-06, 1e-06"           );
+        }
+        fall_power (power_template_7x7_x1) {
+          index_1 ("5, 10, 20, 40, 80, 160, 320");
+          index_2 ("5.76, 11.52, 23.04, 46.08, 92.16, 184.32, 368.64");
+          values (             "1e-06, 1e-06, 1e-06, 1e-06, 1e-06, 1e-06, 1e-06",             "1e-06, 1e-06, 1e-06, 1e-06, 1e-06, 1e-06, 1e-06",             "1e-06, 1e-06, 1e-06, 1e-06, 1e-06, 1e-06, 1e-06",             "1e-06, 1e-06, 1e-06, 1e-06, 1e-06, 1e-06, 1e-06",             "1e-06, 1e-06, 1e-06, 1e-06, 1e-06, 1e-06, 1e-06",             "1e-06, 1e-06, 1e-06, 1e-06, 1e-06, 1e-06, 1e-06",             "1e-06, 1e-06, 1e-06, 1e-06, 1e-06, 1e-06, 1e-06"           );
+        }
+      }
+    }
+    pin (A) {
+      driver_waveform_fall : "PreDriver20.5:fall";
+      driver_waveform_rise : "PreDriver20.5:rise";
+      direction : input;
+      related_ground_pin : VSS;
+      related_power_pin : VDD;
+      max_transition : 320;
+      capacitance : 0.2;
+      rise_capacitance : 0.2;
+      rise_capacitance_range (0.15447, 0.2);
+      fall_capacitance : 0.2;
+      fall_capacitance_range (0.15257, 0.2);
+      input_voltage : default_VDD_VSS_input;
+    }
+  }
+}

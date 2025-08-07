@@ -1,0 +1,60 @@
+
+VERSION 5.8 ;
+BUSBITCHARS "[]" ;
+DIVIDERCHAR "/" ;
+
+MACRO HBTvia
+  CLASS CORE ;
+  ORIGIN 0 0 ;
+  FOREIGN HBTvia 0 0 ;
+  SIZE 0.5 BY 0.5 ;
+  SYMMETRY X Y ;
+  SITE CORE ;
+
+  PIN A
+    DIRECTION INPUT ;
+    USE SIGNAL ;
+    PORT
+      LAYER M1 ;
+        RECT 0.225 0.225 0.275 0.275 ;
+    END
+  END A
+
+  PIN Y
+    DIRECTION OUTPUT ;
+    USE SIGNAL ;
+    PORT
+      LAYER M2 ;
+        RECT 0.225 0.225 0.275 0.275 ;
+    END
+  END Y
+
+  PIN VDD
+    DIRECTION INOUT ;
+    USE POWER ;
+    SHAPE ABUTMENT ;
+    PORT
+      LAYER M1 ;
+        RECT 0 0.49 0.5 0.5 ;
+    END
+  END VDD
+
+  PIN VSS
+    DIRECTION INOUT ;
+    USE GROUND ;
+    SHAPE ABUTMENT ;
+    PORT
+      LAYER M1 ;
+        RECT 0 0 0.5 0.01 ;
+    END
+  END VSS
+
+  OBS
+    LAYER VIA1 ;
+      RECT 0.225 0.225 0.275 0.275 ;
+    LAYER M1 ;
+      RECT 0 0 0.5 0.5 ;
+    LAYER M2 ;
+      RECT 0 0 0.5 0.5 ;
+  END
+END HBTvia

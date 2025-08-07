@@ -596,6 +596,7 @@ void EPlacer_3D::densityOverflowUpdate()
     globalDensityOverflow = globalOverflowVolume / nodeVolumeScaled; // τ_total = Σ overflow / Vm
 }
 
+
 void EPlacer_3D::wirelengthGradientUpdate() 
 {
     ////////////////////////////////////////////////////////////////
@@ -1025,12 +1026,12 @@ void EPlacer_3D::totalGradientUpdate()
         {
             float z_factor = 1;
 
-            if (balanceFactor > 1 ) {//balanceFactor > 1 means layer0 > layer1
+            if (balanceFactor > 1.1 ) {//balanceFactor > 1 means layer0 > layer1
                 // positive z gradient should be more important
                 if (cutsizeGradient[index].z > 0) z_factor = 1 * balanceFactor;
                 else z_factor = 1 / balanceFactor;  
             }
-            else {//balanceFactor < 1 means layer0 < layer1
+            else if (balanceFactor < 0.9) {//balanceFactor < 1 means layer0 < layer1
                 // negative z gradient should be more important
                 if (cutsizeGradient[index].z > 0) z_factor = 1 / balanceFactor;
                 else z_factor = 1 * balanceFactor;
@@ -1342,7 +1343,7 @@ void EPlacer_3D::shrink2DTo3DTestData()
         // 根據Y位置分配層：上半部→頂層，下半部→底層
         // float terminalZ = (relativeY > 0) ? layerThickness : 0.0f;
         float terminalZ = layerThickness/2;
-        db->setModuleLocation_3D(terminal, newX, newY, terminalZ);
+        db->setModuleLocation_3D(terminal, newX, newY, 0);
     }
     
     // Step 4: 創建3D site rows (兩層)

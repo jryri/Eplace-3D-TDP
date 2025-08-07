@@ -26,6 +26,10 @@ public:
     bool runSTA (std::string staDEFPath);
     void analyzeSTAReport();
     void outputSTADEF(std::string outputDEFPath);
+    
+    bool run3DSTA (std::string staDEFPath);
+    void analyze3DSTAReport();
+    void output3DSTADEF(std::string outputDEFPath);
 
 private:
     PlaceDB *db;

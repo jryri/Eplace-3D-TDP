@@ -383,14 +383,14 @@ int BookshelfParser::ReadNetsFile(string file, PlaceDB &db)
 		if (tmp[0] == '\0')
 			continue;
 
-		sscanf(tmp, "%s %s %d", tmp1, tmp2, &degree);
+		sscanf(tmp, "%s %s %d %s", tmp1, tmp2, &degree, tmp3);
 		if (strcmp(tmp1, "NetDegree") != 0 || degree < 0)
 		{
 			cerr << "Syntax unsupport in line " << lineNumber << ": "
 				 << tmp1 << endl;
 			return 01;
 		}
-		Net *net = new Net(netIndex); // default constructer
+		Net *net = new Net(netIndex , string(tmp3) ); // default constructer
 		Module *module;
 		int vCount;
 		int pinId;

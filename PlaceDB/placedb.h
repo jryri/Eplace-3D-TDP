@@ -78,8 +78,19 @@ public:
 
     unordered_map<pair<string,string>, pair<Module*, Pin *>, PairStringHash> NodePinMap; // map node name to node pointer
     unordered_map<std::pair<Pin*, Pin*>, float, P2PHash, P2PEqualUnordered> P2PWeightMap;
-    map<string, Module *> moduleMap; // map module name to module pointer(module include nodes and terminals)
-
+    map<string, Module *> moduleMap; // map module name to node pointer(module include nodes and terminals)
+ 
+     // for virtual HBTs for STA
+     vector<Module*> dbHBTs;
+     map<Net*, Module*> netToHBTMap;
+    struct VirtualNet {
+        string name;
+        vector<Pin*> pins; // references to existing pins or virtual HBT pin
+    };
+    vector<VirtualNet> virtualNets; // rebuilt each time addHBT() is called
+    unordered_map<Net*, std::pair<int,int>> netToVNetIdx; // indices into virtualNets: {bottomIdx, topIdx}
+ 
+ 
     vector<POS_3D> nodesLocationRegister;
 
     void setCoreRegion();
@@ -187,6 +198,8 @@ public:
     double calcModuleHPWLfast(Module *);
     double calcBIHPWL();
     int calcCutSize();
+    void addHBT();
+    void removeHBTs();
 
     void moveNodesCenterToCenter(); // used for initial 2D quadratic placement
 

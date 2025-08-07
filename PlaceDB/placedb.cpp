@@ -860,6 +860,135 @@ void PlaceDB::showRows()
     }
 }
 
+void PlaceDB::addHBT()
+{
+    // These should come from LEF/LIB data, hardcoded for now based on previous steps.
+    float hbt_width = 0.5;
+    float hbt_height = 0.5;
+    float hbt_depth = 0.5;
+
+    dbHBTs.clear();
+    netToHBTMap.clear();
+    virtualNets.clear();
+    netToVNetIdx.clear();
+
+    for (Net *curNet : dbNets)
+    {
+        if (!curNet->isPartitioned){
+            continue;
+        }
+
+        // Ensure bound pins for both partitions have been calculated and are available.
+        if (!curNet->boundPinTopXmin || !curNet->boundPinTopXmax || !curNet->boundPinTopYmin || !curNet->boundPinTopYmax ||
+            !curNet->boundPinBottomXmin || !curNet->boundPinBottomXmax || !curNet->boundPinBottomYmin || !curNet->boundPinBottomYmax)
+        {
+            cout << "Warning: Skipping partitioned net " << curNet->name << " because its bound pins are not calculated." << endl;
+            continue;
+        }
+
+        // Get bounding boxes for both partitions directly from pre-calculated bound pins.
+        float x_plus_low = curNet->boundPinTopXmin->getAbsolutePos().x;
+        float x_plus_high = curNet->boundPinTopXmax->getAbsolutePos().x;
+        float y_plus_low = curNet->boundPinTopYmin->getAbsolutePos().y;
+        float y_plus_high = curNet->boundPinTopYmax->getAbsolutePos().y;
+
+        float x_minus_low = curNet->boundPinBottomXmin->getAbsolutePos().x;
+        float x_minus_high = curNet->boundPinBottomXmax->getAbsolutePos().x;
+        float y_minus_low = curNet->boundPinBottomYmin->getAbsolutePos().y;
+        float y_minus_high = curNet->boundPinBottomYmax->getAbsolutePos().y;
+        
+        // Apply Theorem 1 to find the optimal region for the HBT
+        float x_prime_low = min(max(x_plus_low, x_minus_low), min(x_plus_high, x_minus_high));
+        float x_prime_high = max(max(x_plus_low, x_minus_low), min(x_plus_high, x_minus_high));
+
+        float y_prime_low = min(max(y_plus_low, y_minus_low), min(y_plus_high, y_minus_high));
+        float y_prime_high = max(max(y_plus_low, y_minus_low), min(y_plus_high, y_minus_high));
+
+        // Place the HBT at the center of the optimal region
+        float optimal_x = (x_prime_low + x_prime_high) / 2.0;
+        float optimal_y = (y_prime_low + y_prime_high) / 2.0;
+        float optimal_z = 0; // HBT is a via, place at z=0 and let legalizer handle it.
+
+        string hbt_name = "hbt_" + curNet->name;
+        int hbt_idx = dbNodes.size() + dbHBTs.size();
+
+        Module* hbt_module = new Module(hbt_idx, hbt_name, hbt_width, hbt_height, false, false);
+        hbt_module->depth = hbt_depth; 
+        hbt_module->isMacro = true; 
+        
+        setModuleCenter_3D(hbt_module, optimal_x, optimal_y, optimal_z);
+
+        // Create two directed pins on HBT: A (input) and Y (output)
+        Pin* hbt_pin_A = new Pin(hbt_module, curNet, hbt_width/2.0, hbt_height/2.0);
+        hbt_pin_A->name = "A"; 
+        hbt_pin_A->setDirection(PIN_DIRECTION_IN);
+        hbt_module->addPin(hbt_pin_A);
+
+        Pin* hbt_pin_Y = new Pin(hbt_module, curNet, hbt_width/2.0, hbt_height/2.0);
+        hbt_pin_Y->name = "Y"; 
+        hbt_pin_Y->setDirection(PIN_DIRECTION_OUT);
+        hbt_module->addPin(hbt_pin_Y);
+         
+        dbHBTs.push_back(hbt_module);
+        netToHBTMap[curNet] = hbt_module;
+        
+        // Decide signal direction based on driver locations
+        int bottom_out = 0, top_out = 0;
+        for (Pin* p : curNet->netPins) {
+            if (p->direction == PIN_DIRECTION_OUT) {
+                if (p->module->getCenter().z > defaultModuleDepth/2) top_out++;
+                else bottom_out++;
+            }
+        }
+        bool bottom_to_top = (bottom_out > top_out);
+        // if tie or none, default to bottom->top
+        if (bottom_out == 0 && top_out == 0) bottom_to_top = true;
+
+        // Build two virtual nets: bottom and top, each includes its side pins + correct HBT pin (A or Y)
+        VirtualNet vnetBottom; vnetBottom.name = curNet->name + "_bot";
+        VirtualNet vnetTop;    vnetTop.name    = curNet->name + "_top";
+        for (Pin* p : curNet->netPins) {
+            int layer = p->module->getCenter().z > defaultModuleDepth/2 ? 1 : 0;
+            if (layer == 1) vnetTop.pins.push_back(p);
+            else vnetBottom.pins.push_back(p);
+        }
+        if (bottom_to_top) {
+            // bottom side connects to HBT input A, top side to output Y
+            vnetBottom.pins.push_back(hbt_pin_A);
+            vnetTop.pins.push_back(hbt_pin_Y);
+        } else {
+            // top -> bottom
+            vnetTop.pins.push_back(hbt_pin_A);
+            vnetBottom.pins.push_back(hbt_pin_Y);
+        }
+        int botIdx = virtualNets.size();
+        virtualNets.push_back(std::move(vnetBottom));
+        int topIdx = virtualNets.size();
+        virtualNets.push_back(std::move(vnetTop));
+        netToVNetIdx[curNet] = {botIdx, topIdx};
+    }
+    
+    if (!dbHBTs.empty()) {
+        cout << "[INFO] Added " << dbHBTs.size() << " virtual HBTs for STA (with virtual nets)." << endl;
+    }
+}
+
+void PlaceDB::removeHBTs()
+{
+    for (Module* hbt : dbHBTs) {
+        for (Pin* pin : hbt->modulePins) {
+            delete pin;
+        }
+        delete hbt;
+    }
+    dbHBTs.clear();
+    netToHBTMap.clear();
+    virtualNets.clear();
+    netToVNetIdx.clear();
+    cout << "[INFO] Removed virtual HBTs and virtual nets." << endl;
+}
+
+
 void PlaceDB::outputBookShelf(string suffix, bool plOnly)
 {
     string outputFilePath;

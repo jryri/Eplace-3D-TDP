@@ -125,6 +125,10 @@ private:
         if (placer2D) placer2D->mGPIterationCount = count;
         if (placer3D) placer3D->mGPIterationCount = count;
     }
+    void calcNetBoundPins_3D() {
+        if (placer3D) placer3D->calcNetBoundPins_3D();
+    }
+
 };
 
 template <typename T>
@@ -178,11 +182,25 @@ void EplaceNesterovOpt<T>::opt_step()
 
     if (isTiming && iter_count % STA_ITER == 0){
         // output def and run sta
+
         cout << "isTiming" << endl;
         string staDEFPath = "./sta_iter" + to_string(iter_count) + ".def";
-        openroadInterface->outputSTADEF(staDEFPath);
-        openroadInterface->runSTA(staDEFPath);
-        openroadInterface->analyzeSTAReport();
+        if (placer3D){
+            //need to add HBT and partitioned net
+            calcNetBoundPins_3D();
+            placer3D->addHBT();
+
+            openroadInterface->output3DSTADEF(staDEFPath);
+            openroadInterface->run3DSTA(staDEFPath);
+            openroadInterface->analyze3DSTAReport();
+
+            placer3D->removeHBTs();
+        }
+        else{
+            openroadInterface->outputSTADEF(staDEFPath);
+            openroadInterface->runSTA(staDEFPath);
+            openroadInterface->analyzeSTAReport();
+        }
         synccurTNS();
     }
 
